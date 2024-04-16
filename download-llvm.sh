@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ue -o pipefail
+set -xue -o pipefail
 
 COMMIT_SHA=ea3d0db130b9a6c4678c11dd8bc48e5630624b62
 URL=https://github.com/llvm/llvm-project/archive/${COMMIT_SHA}.tar.gz
@@ -11,7 +11,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 fi
 
 wget --quiet ${URL}
-echo "${TARBALL_SHA256}  ${TARBALL}" | shasum256 --check
+echo "${TARBALL_SHA256}  ${TARBALL}" | shasum --algorithm 256 --check
 tar -xf "${TARBALL}"
 rm ${TARBALL}
 mv "llvm-project-${COMMIT_SHA}" llvm-project
