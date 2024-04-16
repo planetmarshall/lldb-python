@@ -19,7 +19,8 @@ wheel.install-dir = "."
 
 [tool.scikit-build.cmake.define]
 LLVM_ENABLE_PROJECTS = "clang;llvm;lldb"
-LLVM_TARGETS_TO_BUILD = "X86"
+LLVM_TARGETS_TO_BUILD = {env="SKBUILD_LLVM_TARGETS_TO_BUILD", default="X86"}
+LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
 LLVM_INCLUDE_EXAMPLES = "OFF"
 LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
@@ -29,6 +30,10 @@ LLDB_PYTHON_INSTALL_PATH = "."
 build="cp312-*"
 archs="native"
 build-verbosity = 1
+before-build="./download-llvm.sh"
+manylinux-x86_64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.linux]
 before-all=[
   "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
   "pip install wheel",
@@ -36,8 +41,6 @@ before-all=[
   "tar -xf static-libs-for-embedding-only.tar.xz",
   "popd"
 ]
-before-build="./download-llvm.sh"
-manylinux-x86_64-image = "manylinux_2_28"
 
 [[tool.cibuildwheel.overrides]]
 select = "*"
