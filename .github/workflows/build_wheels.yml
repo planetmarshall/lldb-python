@@ -14,21 +14,17 @@ jobs:
           # - os: ubuntu-latest
           # SKBUILD_LLVM_TARGETS_TO_BUILD: "LLVM_ENABLE_TARGETS=X86"
           - os: macos-14
-            SKBUILD_LLVM_TARGETS_TO_BUILD: "AArch64"
-            SKBUILD_LLVM_ENABLE_RUNTIMES: "libcxx"
+            llvm_targets: "AArch64"
+            llvm_runtimes: "libcxx"
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.17.0
-        # env:
-        #   CIBW_SOME_OPTION: value
-        #    ...
-        # with:
-        #   package-dir: .
-        #   output-dir: wheelhouse
-        #   config-file: "{package}/pyproject.toml"
+        env:
+          SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
+          SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
 
       - uses: actions/upload-artifact@v4
         with:
