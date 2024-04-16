@@ -11,8 +11,8 @@ jobs:
         # macos-13 is an intel runner, macos-14 is apple silicon
         os: [macos-14]
         include:
-          - os: ubuntu-latest
-            SKBUILD_LLVM_TARGETS_TO_BUILD: "LLVM_ENABLE_TARGETS=X86"
+          # - os: ubuntu-latest
+          # SKBUILD_LLVM_TARGETS_TO_BUILD: "LLVM_ENABLE_TARGETS=X86"
           - os: macos-14
             SKBUILD_LLVM_TARGETS_TO_BUILD: "AArch64"
             SKBUILD_LLVM_ENABLE_RUNTIMES: "libcxx"
