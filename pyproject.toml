@@ -1,0 +1,46 @@
+[build-system]
+requires = ["scikit-build-core", "swig"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "lldb-unofficial"
+version = "19.0.0.dev1"
+
+[tool.scikit-build]
+build-dir = "build/{wheel_tag}"
+logging.level = "INFO"
+cmake.verbose = true
+cmake.build-type = "Release"
+cmake.source-dir = "llvm-project/llvm"
+cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts"]
+install.components = ["liblldb", "lldb-server", "lldb-python-scripts"]
+wheel.packages = []
+wheel.install-dir = "."
+
+[tool.scikit-build.cmake.define]
+LLVM_ENABLE_PROJECTS = "clang;llvm;lldb"
+LLVM_TARGETS_TO_BUILD = "X86"
+LLVM_INCLUDE_EXAMPLES = "OFF"
+LLDB_ENABLE_LUA = "OFF"
+LLDB_ENABLE_PYTHON = "ON"
+LLDB_PYTHON_INSTALL_PATH = "."
+
+[tool.cibuildwheel]
+build="cp312-*"
+archs="native"
+build-verbosity = 1
+before-all=[
+  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
+  "pip install wheel",
+  "pushd /opt/_internal",
+  "tar -xf static-libs-for-embedding-only.tar.xz",
+  "popd"
+]
+before-build="./download-llvm.sh"
+manylinux-x86_64-image = "manylinux_2_28"
+
+[[tool.cibuildwheel.overrides]]
+select = "*"
+inherit.repair-wheel-command = "prepend"
+repair-wheel-command = "./edit-wheel.sh {wheel}"
+

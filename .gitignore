@@ -1,0 +1,7 @@
+llvm-project
+*.tar.gz
+dist
+venv
+.venv
+.idea
+build
