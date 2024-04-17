@@ -1,5 +1,8 @@
 [build-system]
-requires = ["scikit-build-core", "swig"]
+requires = [
+  "scikit-build-core",
+  "swig"
+]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -12,7 +15,7 @@ logging.level = "INFO"
 cmake.verbose = true
 cmake.build-type = "Release"
 cmake.source-dir = "llvm-project/llvm"
-cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts"]
+cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts", "lldb-dotest"]
 install.components = ["liblldb", "lldb-server", "lldb-python-scripts"]
 wheel.packages = []
 # LLDB generates its own prefix lib/python3.X/site_packages so install into
@@ -34,6 +37,11 @@ archs="native"
 build-verbosity = 1
 before-build="./download-llvm.sh"
 manylinux-x86_64-image = "manylinux_2_28"
+test-requires = [
+  "pytest",
+  "cmake"
+]
+test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
 before-all=[
@@ -48,4 +56,3 @@ before-all=[
 select = "*"
 inherit.repair-wheel-command = "prepend"
 repair-wheel-command = "./edit-wheel.sh {wheel}"
-
