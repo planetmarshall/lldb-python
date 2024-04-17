@@ -34,16 +34,17 @@ mv "${DATA_DIR:?}/bin" "${SITE_PACKAGES}"
 
 # Fixup the paths in the record file
 echo "Fixing up the RECORD file"
-[[ "$(uname -s)" == "Darwin" ]] && SED_BACKUP=""
 RECORD_FILE=$(find . -name RECORD)
 [[ -z "${RECORD_FILE}" ]] && echo "RECORD_FILE was null" && exit 1
-sed -i ${SED_BACKUP} '/liblldb/d' "${RECORD_FILE}"
+sed -i.bak '/liblldb/d' "${RECORD_FILE}"
 
 LLDB_SERVER_PATH=$(find * -name lldb-server)
-sed -i ${SED_BACKUP} "s|^.*lldb-server|${LLDB_SERVER_PATH}|" ${RECORD_FILE}
+
+echo ${LLDB_SERVER_PATH}
+sed -i.bak "s|^.*lldb-server|${LLDB_SERVER_PATH}|" ${RECORD_FILE}
 
 popd
 wheel pack "${WHEEL_DIR}"
-rm -rf "${WHEEL_DIR}"
+rm -r "${WHEEL_DIR}"
 
 popd
