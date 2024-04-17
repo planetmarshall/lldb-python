@@ -63,8 +63,14 @@ before-all=[
   "tar -xf static-libs-for-embedding-only.tar.xz",
   "popd"
 ]
+repair-wheel-command=[
+  "./edit-wheel.sh {wheel}",
+  "auditwheel repair -w {dest_dir} {wheel}"
+]
 
-[[tool.cibuildwheel.overrides]]
-select = "*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "./edit-wheel.sh {wheel}"
+[tool.cibuildwheel.macos]
+repair-wheel-command=[
+  "./edit-wheel.sh {wheel}",
+  "delocate-wheel --require-archs {delocate_archs} --exclude Python -w {dest_dir} -v {wheel}"
+]
+
