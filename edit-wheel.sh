@@ -11,7 +11,7 @@ pushd "${WORKING_DIR}"
 wheel unpack "${WHEEL}"
 rm ${WHEEL}
 
-WHEEL_DIR=$(find . -maxdepth 1 -name 'lldb_unofficial*' -type d)
+WHEEL_DIR=$(find . -maxdepth 1 -name 'lldb_python*' -type d)
 [[ -z "${WHEEL_DIR}" ]] && echo "WHEEL_DIR was null" && exit 1
 pushd "${WHEEL_DIR}"
 

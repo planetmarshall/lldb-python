@@ -2,7 +2,7 @@ lldb-python
 ===========
 
 An unofficial self contained distribution of the 
-[LLDB Python API](https://lldb.llvm.org/python_api.html) to ease integration of the
+[LLDB Python Bindings](https://lldb.llvm.org/python_api.html) to ease integration of the
 LLDB debugger into external Python projects.
 
 The Python API is normally distributed as part of the main LLDB package, but this

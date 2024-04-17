@@ -6,13 +6,25 @@ requires = [
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "lldb-unofficial"
+name = "lldb-python"
 version = "19.0.0.dev1"
+authors = [{name = "Andrew Marshall", email = "planetmarshalluk@gmail.com"}]
+description = "Unofficial self contained distribution of the LLDB Python Bindings"
+readme = "README.md"
+keywords = "lldb"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: LLVM-exception",
+  "Topic :: Software Development :: Debuggers"
+]
+[project.urls]
+Documentation = "https://lldb.llvm.org/python_api.html"
+Repository = "https://github.com/planetmarshall/lldb-python"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"
 logging.level = "INFO"
-cmake.verbose = true
 cmake.build-type = "Release"
 cmake.source-dir = "llvm-project/llvm"
 cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts"]
@@ -32,7 +44,7 @@ LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
 
 [tool.cibuildwheel]
-build="cp312-*"
+build=["cp310-*", "cp311-*", "cp312-*"]
 archs="native"
 build-verbosity = 1
 before-build="./download-llvm.sh"
