@@ -11,7 +11,7 @@ version = "19.0.0.dev1"
 authors = [{name = "Andrew Marshall", email = "planetmarshalluk@gmail.com"}]
 description = "Unofficial self contained distribution of the LLDB Python Bindings"
 readme = "README.md"
-keywords = "lldb"
+keywords = ["lldb", "debugger", "llvm"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
