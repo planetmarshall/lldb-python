@@ -15,7 +15,10 @@ cmake.source-dir = "llvm-project/llvm"
 cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts"]
 install.components = ["liblldb", "lldb-server", "lldb-python-scripts"]
 wheel.packages = []
-wheel.install-dir = "."
+# LLDB generates its own prefix lib/python3.X/site_packages so install into
+# the root of the wheel to avoid having to change the LLDB source
+experimental = true
+wheel.install-dir = "/data"
 
 [tool.scikit-build.cmake.define]
 LLVM_ENABLE_PROJECTS = "clang;llvm;lldb"
@@ -24,7 +27,6 @@ LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
 LLVM_INCLUDE_EXAMPLES = "OFF"
 LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
-LLDB_PYTHON_INSTALL_PATH = "."
 
 [tool.cibuildwheel]
 build="cp312-*"
