@@ -34,7 +34,7 @@ of the built wheel is done that could not be accomplished using these tools alon
 ```
 ./download-llvm.sh
 pipx run build -v --wheel
-./edit-wheel.sh
+./python edit-wheel.py preprocess dist/<wheel_file> --dest-dir out/
 ```
 
 Then to test the wheel
@@ -42,6 +42,6 @@ Then to test the wheel
 pip install -r requirements.txt
 python -m venv .venv
 source .venv/bin/activate
-pip install dist/<wheel_file>
+pip install out/<wheel_file>
 pytest -v test
 ```
