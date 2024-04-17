@@ -2,25 +2,48 @@
 #
 # Removes the lib folder installed by LLDB and moves
 # things around to sensible locations
-set -ue -o pipefail
+set -e -o pipefail
 
 WHEEL_PATH=$1
-WORKING_DIR=$(dirname ${WHEEL_PATH})
-WHEEL=$(basename ${WHEEL_PATH})
-PATTERN='lldb_unofficial*'
-pushd ${WORKING_DIR}
-wheel unpack ${WHEEL}
+WORKING_DIR=$(dirname "${WHEEL_PATH}")
+WHEEL=$(basename "${WHEEL_PATH}")
+pushd "${WORKING_DIR}"
+wheel unpack "${WHEEL}"
+rm ${WHEEL}
 
-#rm ${WHEEL}
-DIR=$(find . -maxdepth 1 -name "${PATTERN}" -type d)
-[[ -z "${DIR}" ]] && echo "DIR was null" && exit 1
-rm -r ${DIR}/lib
+WHEEL_DIR=$(find . -maxdepth 1 -name 'lldb_unofficial*' -type d)
+[[ -z "${WHEEL_DIR}" ]] && echo "WHEEL_DIR was null" && exit 1
+pushd "${WHEEL_DIR}"
 
-RECORD_FILE=$(find ${DIR} -name RECORD)
-sed -i '/lib/d' ${RECORD_FILE}
-sed -i 's|site_packages/||' ${RECORD_FILE}
-mv ${DIR}/site_packages/* ${DIR}
-rm -rf ${DIR}/site_packages
+DATA_DIR=$(find . -name data -type d)
+[[ -z "${DATA_DIR}" ]] && echo "DATA_DIR was null" && exit 1
 
-#wheel pack ${DIR}
+# remove the extra libs installed by LLVM. These are usually symlinks but they
+# are converted into files in the wheel. We can't just not install them in the first
+# place as LLVM uses them to create the _lldb python library which we need.
+echo "Removing unused library files"
+rm ${DATA_DIR:?}/lib/liblldb*
+
+SITE_PACKAGES=$(find . -name site-packages -type d)
+[[ -z "${SITE_PACKAGES}" ]] && echo "SITE_PACKAGES was null" && exit 1
+
+# the lldb libraries expect to find lldb-server at ../bin/lldb-server
+# we could use LLDB_DEBUGSERVER_PATH but it's preferable to not have to define environment variables
+echo "Moving lldb-server"
+mv "${DATA_DIR:?}/bin" "${SITE_PACKAGES}"
+
+# Fixup the paths in the record file
+echo "Fixing up the RECORD file"
+[[ "$(uname -s)" == "Darwin" ]] && SED_BACKUP=""
+RECORD_FILE=$(find . -name RECORD)
+[[ -z "${RECORD_FILE}" ]] && echo "RECORD_FILE was null" && exit 1
+sed -i ${SED_BACKUP} '/liblldb/d' "${RECORD_FILE}"
+
+LLDB_SERVER_PATH=$(find * -name lldb-server)
+sed -i ${SED_BACKUP} "s|^.*lldb-server|${LLDB_SERVER_PATH}|" ${RECORD_FILE}
+
+popd
+wheel pack "${WHEEL_DIR}"
+rm -rf "${WHEEL_DIR}"
+
 popd
