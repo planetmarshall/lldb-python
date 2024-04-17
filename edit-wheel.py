@@ -12,10 +12,6 @@ from tempfile import TemporaryDirectory
 from typing import Iterable
 
 
-def postprocess():
-    pass
-
-
 def _unpack_wheel(wheel_file: Path, destination: Path) -> Path:
     run(["wheel", "unpack", str(wheel_file), "--dest", destination], check=True)
     pattern = "lldb_python*"
@@ -71,9 +67,9 @@ def _repack_wheel(src_dir: Path, dest_dir: Path):
     run(["wheel", "pack", "--dest-dir", dest_dir, src_dir])
 
 
-def preprocess(args):
+def preprocess(wheel, dest_dir):
     with TemporaryDirectory() as tmp:
-        wheel_dir = _unpack_wheel(Path(args.wheel), Path(tmp))
+        wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         data_dir = _find_file_or_folder(wheel_dir, "data")
         for extra_lib in _extra_libs(data_dir):
             print(f"removing extra library {extra_lib}")
@@ -84,8 +80,40 @@ def preprocess(args):
         shutil.move(data_dir / "bin", site_packages_dir)
 
         _fixup_record_file(wheel_dir)
-        os.makedirs(args.dest_dir, exist_ok=True)
-        _repack_wheel(wheel_dir, args.dest_dir)
+        os.makedirs(dest_dir, exist_ok=True)
+        _repack_wheel(wheel_dir, dest_dir)
+
+
+def _dependencies(wheel_file):
+    result = run(["delocate-listdeps", wheel_file], check=True, capture_output=True, text=True)
+    return [os.path.basename(lib).split(".")[0] for lib in result.stdout.splitlines()]
+
+
+def _lib_entries(otool_output, lib_dependencies):
+    for row in otool_output.splitlines():
+        elements = row.strip().split()
+        if "name" in elements:
+            lib = elements[1].split("/")[-1]
+            for lib_base in lib_dependencies:
+                if lib_base in lib:
+                    yield lib, elements[1]
+
+
+def _update_shared_lib_paths(wheel: Path, shared_lib: Path):
+    otool_output = run(["otool", "-l", shared_lib], check=True, capture_output=True, text=True)
+    old_entries = {lib: entry for lib, entry in _lib_entries(otool_output.stdout, _dependencies(wheel))}
+
+    for lib, lib_path in old_entries.items():
+        run(["install_name_tool", "-change", lib_path, f"@loader_path/../lldb_python.dylibs/{lib}", shared_lib], check=True)
+
+
+def postprocess(wheel, dest_dir):
+    with TemporaryDirectory() as tmp:
+        wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
+        shared_lib = _find_file_or_folder(wheel_dir, "*.so")
+        _update_shared_lib_paths(wheel, shared_lib)
+        os.makedirs(dest_dir, exist_ok=True)
+        _repack_wheel(wheel_dir, dest_dir)
 
 
 def main():
@@ -94,15 +122,22 @@ def main():
 
     preprocess_parser = subparsers.add_parser("preprocess")
     preprocess_parser.add_argument("wheel")
-    preprocess_parser.add_argument("--dest-dir", default=os.getcwd())
+    preprocess_parser.add_argument("--dest-dir", default=None)
     preprocess_parser.set_defaults(func=preprocess)
 
     postprocess_parser = subparsers.add_parser("postprocess")
     postprocess_parser.add_argument("wheel")
+    postprocess_parser.add_argument("--dest-dir", default=None)
     postprocess_parser.set_defaults(func=postprocess)
 
     args = parser.parse_args()
-    args.func(args)
+    if Path(args.wheel).is_dir():
+        wheel = _find_file_or_folder(args.wheel, "lldb_python*.whl")
+    else:
+        wheel = args.wheel
+
+    dest_dir = args.dest_dir or os.path.dirname(wheel)
+    args.func(wheel, dest_dir)
 
 
 if __name__ == "__main__":

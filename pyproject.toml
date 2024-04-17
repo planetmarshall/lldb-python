@@ -64,13 +64,14 @@ before-all=[
   "popd"
 ]
 repair-wheel-command=[
-  "./edit-wheel.sh {wheel}",
+  "python edit-wheel.py preprocess {wheel}",
   "auditwheel repair -w {dest_dir} {wheel}"
 ]
 
 [tool.cibuildwheel.macos]
 repair-wheel-command=[
-  "./edit-wheel.sh {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} --exclude Python -w {dest_dir} -v {wheel}"
+  "python edit-wheel.py preprocess {wheel}",
+  "delocate-wheel --require-archs {delocate_archs} --exclude Python -w {dest_dir} -v {wheel}",
+  "python edit-wheel.py postprocess {dest_dir}"
 ]
 
