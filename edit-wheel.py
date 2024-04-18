@@ -68,6 +68,11 @@ def _repack_wheel(src_dir: Path, dest_dir: Path):
 
 
 def preprocess(wheel, dest_dir):
+    """
+    Remove extra lib files installed by LLVM. These are normally symlinks but the become files
+    in the wheel. We can't just not install them as otherwise the _lldb lib ins not installed
+    which we need.
+    """
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         data_dir = _find_file_or_folder(wheel_dir, "data")
@@ -86,10 +91,13 @@ def preprocess(wheel, dest_dir):
 
 def _dependencies(wheel_file):
     result = run(["delocate-listdeps", wheel_file], check=True, capture_output=True, text=True)
-    return [os.path.basename(lib).split(".")[0] for lib in result.stdout.splitlines()]
+    for lib in result.stdout.splitlines():
+        library_base_name = os.path.basename(lib).split(".")[0]
+        if "python" not in library_base_name.lower():
+            yield library_base_name
 
 
-def _lib_entries(otool_output, lib_dependencies):
+def _lib_install_names(otool_output, lib_dependencies):
     for row in otool_output.splitlines():
         elements = row.strip().split()
         if "name" in elements:
@@ -101,13 +109,21 @@ def _lib_entries(otool_output, lib_dependencies):
 
 def _update_shared_lib_paths(wheel: Path, shared_lib: Path):
     otool_output = run(["otool", "-l", shared_lib], check=True, capture_output=True, text=True)
-    old_entries = {lib: entry for lib, entry in _lib_entries(otool_output.stdout, _dependencies(wheel))}
+    dependencies = list(_dependencies(wheel))
+    old_entries = {lib: entry for lib, entry in _lib_install_names(otool_output.stdout, dependencies)}
 
     for lib, lib_path in old_entries.items():
-        run(["install_name_tool", "-change", lib_path, f"@loader_path/../lldb_python.dylibs/{lib}", shared_lib], check=True)
+        new_lib_path = f"@loader_path/../lldb_python.dylibs/{lib}"
+        print(f"Fixing {lib} to {new_lib_path}")
+        run(["install_name_tool", "-change", lib_path, new_lib_path, shared_lib], check=True)
 
 
 def postprocess(wheel, dest_dir):
+    """
+    ``delocate`` doesn't take account of the data folder
+    (see `Issue 149 <https://github.com/matthew-brett/delocate/issues/149>`_) when calculating library paths,
+    so fix them up here. Also remove the reference to `Python`, as it will be found automatically in the environment
+    """
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")
