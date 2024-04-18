@@ -42,27 +42,6 @@ def _extra_libs(data_dir: Path) -> Iterable[Path]:
                 yield Path(root) / filename
 
 
-def _fixup_record_file(wheel_dir: Path):
-    def updated_records(rows: Iterable[str], lldb_server_path):
-        for row in rows:
-            if "liblldb" in row:
-                continue
-
-            if "lldb-server" in row:
-                yield re.sub(r"^\S+lldb-server", lldb_server_path, row.strip(), 1)
-            else:
-                yield row.strip()
-
-    record_file = _find_file_or_folder(wheel_dir, "RECORD")
-    new_lldb_server_path = _find_file_or_folder(wheel_dir, "lldb-server")
-    new_lldb_server_relative_path = os.path.relpath(new_lldb_server_path, wheel_dir)
-    with open(record_file, 'r') as fp:
-        records = fp.readlines()
-
-    with open(record_file, 'w') as fp:
-        fp.writelines(updated_records(records, new_lldb_server_relative_path))
-
-
 def _repack_wheel(src_dir: Path, dest_dir: Path):
     run(["wheel", "pack", "--dest-dir", dest_dir, src_dir])
 
@@ -71,7 +50,7 @@ def preprocess(wheel, dest_dir):
     """
     Remove extra lib files installed by LLVM. These are normally symlinks but the become files
     in the wheel. We can't just not install them as otherwise the _lldb lib ins not installed
-    which we need.
+    which we need. Also move lldb-server to its expected location relative to the library
     """
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
@@ -84,17 +63,13 @@ def preprocess(wheel, dest_dir):
         print(f"moving bin folder")
         shutil.move(data_dir / "bin", site_packages_dir)
 
-        _fixup_record_file(wheel_dir)
         os.makedirs(dest_dir, exist_ok=True)
         _repack_wheel(wheel_dir, dest_dir)
 
 
 def _dependencies(wheel_file):
     result = run(["delocate-listdeps", wheel_file], check=True, capture_output=True, text=True)
-    for lib in result.stdout.splitlines():
-        library_base_name = os.path.basename(lib).split(".")[0]
-        if "python" not in library_base_name.lower():
-            yield library_base_name
+    return [os.path.basename(lib).split(".")[0] for lib in result.stdout.splitlines()]
 
 
 def _lib_install_names(otool_output, lib_dependencies):
