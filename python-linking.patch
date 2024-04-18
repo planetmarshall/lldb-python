@@ -1,0 +1,98 @@
+diff --git a/lldb/cmake/modules/FindPythonAndSwig.cmake b/lldb/cmake/modules/FindPythonAndSwig.cmake
+index d62cced0d095..88b0da0d888c 100644
+--- a/lldb/cmake/modules/FindPythonAndSwig.cmake
++++ b/lldb/cmake/modules/FindPythonAndSwig.cmake
+@@ -7,7 +7,7 @@
+ macro(FindPython3)
+   # Use PYTHON_HOME as a hint to find Python 3.
+   set(Python3_ROOT_DIR "${PYTHON_HOME}")
+-  find_package(Python3 COMPONENTS Interpreter Development)
++  find_package(Python3 COMPONENTS ${ARGV})
+   if(Python3_FOUND AND Python3_Interpreter_FOUND)
+ 
+     # The install name for the Python 3 framework in Xcode is relative to
+@@ -34,11 +34,19 @@ macro(FindPython3)
+   endif()
+ endmacro()
+ 
+-if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
+-  set(PYTHONANDSWIG_FOUND TRUE)
++if(Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
++  if(LLDB_SKIP_LINK_PYTHON)  
++    set(PYTHONANDSWIG_FOUND TRUE)
++  elseif (Python3_LIBRARIES)
++    set(PYTHONANDSWIG_FOUND TRUE)
++  endif()  
+ else()
+   if (LLDB_ENABLE_SWIG)
+-    FindPython3()
++      if (LLDB_SKIP_LINK_PYTHON)  
++          FindPython3(Interpreter Development.Module)
++      else()  
++          FindPython3(Interpreter Development)
++      endif()    
+   else()
+     message(STATUS "SWIG 4 or later is required for Python support in LLDB but could not be found")
+   endif()
+@@ -55,12 +63,13 @@ else()
+   endif()
+ 
+   include(FindPackageHandleStandardArgs)
++  set(PYTHON_REQUIRED_ARGS Python3_INCLUDE_DIRS Python3_EXECUTABLE LLDB_ENABLE_SWIG)
++  if (NOT LLDB_SKIP_LINK_PYTHON)
++    list(APPEND PYTHON_REQUIRED_ARGS Python3_LIBRARIES)
++  endif()  
+   find_package_handle_standard_args(PythonAndSwig
+                                     FOUND_VAR
+                                       PYTHONANDSWIG_FOUND
+                                     REQUIRED_VARS
+-                                      Python3_LIBRARIES
+-                                      Python3_INCLUDE_DIRS
+-                                      Python3_EXECUTABLE
+-                                      LLDB_ENABLE_SWIG)
++                                      ${PYTHON_REQUIRED_ARGS})
+ endif()
+diff --git a/lldb/cmake/modules/LLDBConfig.cmake b/lldb/cmake/modules/LLDBConfig.cmake
+index 5d62213c3f58..732bd3e0d0fc 100644
+--- a/lldb/cmake/modules/LLDBConfig.cmake
++++ b/lldb/cmake/modules/LLDBConfig.cmake
+@@ -69,6 +69,7 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
+   "Fail to configure if certain requirements are not met for testing." OFF)
+ option(LLDB_TEST_USE_VENDOR_PACKAGES
+   "Use packages from lldb/third_party/Python/module instead of system deps." OFF)
++option(LLDB_SKIP_LINK_PYTHON "Dont link to the Python library, so that liblldb can be used as a Python extension module" ON)
+ 
+ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
+   "Path to the global lldbinit directory. Relative paths are resolved relative to the
+diff --git a/lldb/source/API/CMakeLists.txt b/lldb/source/API/CMakeLists.txt
+index 57cc44f76467..09f742fff3d9 100644
+--- a/lldb/source/API/CMakeLists.txt
++++ b/lldb/source/API/CMakeLists.txt
+@@ -127,7 +127,7 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
+   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+ endif()
+ 
+-if(Python3_RPATH)
++if(Python3_RPATH AND NOT LLDB_SKIP_LINK_PYTHON)
+   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
+   set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
+ endif()
+@@ -147,10 +147,14 @@ if(LLDB_ENABLE_PYTHON)
+     set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
+       PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+   endif()
+-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
+-      NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
+-      PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
++  if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
++    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
++        set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
++          PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
++    endif()
++    if (LLDB_SKIP_LINK_PYTHON)
++      target_link_options(liblldb PRIVATE "LINKER:--unresolved-symbols=ignore-all")
++    endif()    
+   endif ()
+ endif()
+ 

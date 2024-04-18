@@ -19,3 +19,5 @@ echo "${TARBALL_SHA256}  ${TARBALL}" | sha256sum --check
 tar -xf "${TARBALL}"
 rm ${TARBALL}
 mv "llvm-project-${COMMIT_SHA}" llvm-project
+patch -d llvm-project -p1 < python-linking.patch
+

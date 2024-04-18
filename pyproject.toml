@@ -40,17 +40,18 @@ wheel.install-dir = "/data"
 LLVM_ENABLE_PROJECTS = "clang;lldb"
 LLVM_TARGETS_TO_BUILD = {env="SKBUILD_LLVM_TARGETS_TO_BUILD", default="X86"}
 LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
+LLVM_RAM_PER_COMPILE_JOB={env="SKBUILD_LLVM_RAM_PER_COMPILE_JOB", default=""}
+LLVM_RAM_PER_LINK_JOB={env="SKBUILD_LLVM_RAM_PER_LINK_LOB", default=""}
 LLVM_INCLUDE_EXAMPLES = "OFF"
+LLDB_SKIP_LINK_PYTHON = "ON"
 LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
-LLVM_RAM_PER_COMPILE_JOB={env="SKBUILD_LLVM_RAM_PER_COMPILE_JOB", default="4096"}
-LLVM_RAM_PER_LINK_JOB={env="SKBUILD_LLVM_RAM_PER_LINK_LOB", default="16384"}
 
 [tool.cibuildwheel]
 archs="native"
 build-verbosity = 1
 before-build="./download-llvm.sh"
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:fpic"
+manylinux-x86_64-image = "manylinux_2_28_x86_64"
 test-requires = [
   "pytest",
   "cmake"
@@ -58,12 +59,14 @@ test-requires = [
 test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
+environment-pass = [
+  "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
+  "SKBUILD_LLVM_RAM_PER_LINK_LOB"
+]
+
 before-all=[
   "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
-  "pip install wheel",
-  "pushd /opt/_internal",
-  "tar -xf static-libs-for-embedding-only.tar.xz",
-  "popd"
+  "pip install wheel"
 ]
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",
