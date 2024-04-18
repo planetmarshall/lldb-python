@@ -94,7 +94,8 @@ def _update_shared_lib_paths_macos(wheel: Path, shared_lib: Path):
 
 
 def _update_shared_lib_paths_linux(wheel: Path, shared_lib: Path):
-    run(["patchelf", "--set-rpath", "$ORIGIN/../.libs", shared_lib], check=True)
+    print(f"Updating shared library paths in {shared_lib}")
+    run(["patchelf", "--set-rpath", "$ORIGIN/../lldb_python.libs", shared_lib], check=True)
 
 
 def postprocess(wheel, dest_dir):
@@ -108,6 +109,8 @@ def postprocess(wheel, dest_dir):
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")
         _update_shared_lib_paths(wheel, shared_lib)
+        lldb_server = _find_file_or_folder(wheel_dir, "lldb-server")
+        _update_shared_lib_paths(wheel, lldb_server)
         os.makedirs(dest_dir, exist_ok=True)
         _repack_wheel(wheel_dir, dest_dir)
 
