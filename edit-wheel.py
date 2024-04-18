@@ -103,7 +103,7 @@ def postprocess(wheel, dest_dir):
     (see `Issue 149 <https://github.com/matthew-brett/delocate/issues/149>`_) when calculating library paths,
     so fix them up here. Also remove the reference to `Python`, as it will be found automatically in the environment
     """
-    _update_shared_lib_paths = _update_shared_lib_paths_macos if sys.platform == "Darwin" else _update_shared_lib_paths_linux
+    _update_shared_lib_paths = _update_shared_lib_paths_macos if sys.platform.lower() == "darwin" else _update_shared_lib_paths_linux
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")

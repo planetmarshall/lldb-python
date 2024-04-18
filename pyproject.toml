@@ -65,8 +65,8 @@ environment-pass = [
 ]
 
 before-all=[
-  "yum install -y wget libedit-devel libxml2-devel ncurses-devel patchelf",
-  "pip install wheel"
+  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
+  "pip install patchelf wheel"
 ]
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",
