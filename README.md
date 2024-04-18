@@ -9,6 +9,10 @@ The Python API is normally distributed as part of the main LLDB package, but thi
 typically uses the System Python which can make it difficult to integrate into
 standalone Python projects that typically will use a virtual environment
 
+A small patch is made to the LLDB build to disable linking to the Python library.
+This is unnecessary when LLDB is being used as a Python extension module and makes
+the package more difficult to relocate.
+
 Installation
 ------------
 

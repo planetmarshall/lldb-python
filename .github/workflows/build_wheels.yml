@@ -15,11 +15,9 @@ jobs:
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
-        os: [macos-14]
+        os: [macos-14, ubuntu-22.04]
         python_version: ["cp310-*", "cp311-*", "cp312-*"]
         include:
-          # - os: ubuntu-latest
-          # SKBUILD_LLVM_TARGETS_TO_BUILD: "LLVM_ENABLE_TARGETS=X86"
           - os: macos-14
             llvm_targets: "AArch64"
             llvm_runtimes: "libcxx"
