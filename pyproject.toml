@@ -1,37 +1,61 @@
-[build-system]
-requires = ["scikit-build-core", "swig"]
-build-backend = "scikit_build_core.build"
-
 [project]
-name = "lldb-unofficial"
+name = "lldb-python"
 version = "19.0.0.dev1"
+authors = [{name = "Andrew Marshall", email = "planetmarshalluk@gmail.com"}]
+description = "Unofficial self contained distribution of the LLDB Python Bindings"
+readme = "README.md"
+keywords = ["lldb", "debugger", "llvm"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: LLVM-exception",
+  "Topic :: Software Development :: Debuggers"
+]
+
+[project.urls]
+Documentation = "https://lldb.llvm.org/python_api.html"
+Repository = "https://github.com/planetmarshall/lldb-python"
+
+[build-system]
+requires = [
+  "scikit-build-core",
+  "swig"
+]
+build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"
 logging.level = "INFO"
-cmake.verbose = true
 cmake.build-type = "Release"
 cmake.source-dir = "llvm-project/llvm"
 cmake.targets = ["liblldb", "lldb-server", "lldb-python-scripts"]
 install.components = ["liblldb", "lldb-server", "lldb-python-scripts"]
 wheel.packages = []
-wheel.install-dir = "."
+# LLDB generates its own prefix lib/python3.X/site_packages so install into
+# the root of the wheel to avoid having to change the LLDB source
+experimental = true
+wheel.install-dir = "/data"
 
 [tool.scikit-build.cmake.define]
-LLVM_ENABLE_PROJECTS = "clang;llvm;lldb"
+LLVM_ENABLE_PROJECTS = "clang;lldb"
 LLVM_TARGETS_TO_BUILD = {env="SKBUILD_LLVM_TARGETS_TO_BUILD", default="X86"}
 LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
 LLVM_INCLUDE_EXAMPLES = "OFF"
 LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
-LLDB_PYTHON_INSTALL_PATH = "."
+LLVM_RAM_PER_COMPILE_JOB={env="SKBUILD_LLVM_RAM_PER_COMPILE_JOB", default="4096"}
+LLVM_RAM_PER_LINK_JOB={env="SKBUILD_LLVM_RAM_PER_LINK_LOB", default="16384"}
 
 [tool.cibuildwheel]
-build="cp312-*"
 archs="native"
 build-verbosity = 1
 before-build="./download-llvm.sh"
-manylinux-x86_64-image = "manylinux_2_28"
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:fpic"
+test-requires = [
+  "pytest",
+  "cmake"
+]
+test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
 before-all=[
@@ -41,9 +65,14 @@ before-all=[
   "tar -xf static-libs-for-embedding-only.tar.xz",
   "popd"
 ]
+repair-wheel-command=[
+  "python edit-wheel.py preprocess {wheel}",
+  "auditwheel repair -w {dest_dir} {wheel}"
+]
 
-[[tool.cibuildwheel.overrides]]
-select = "*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "./edit-wheel.sh {wheel}"
-
+[tool.cibuildwheel.macos]
+repair-wheel-command=[
+  "python edit-wheel.py preprocess {wheel}",
+  "delocate-wheel --require-archs {delocate_archs} --exclude Python -w {dest_dir} -v {wheel}",
+  "python edit-wheel.py postprocess {dest_dir}"
+]
