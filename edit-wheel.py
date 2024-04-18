@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 from glob import glob
@@ -82,7 +82,7 @@ def _lib_install_names(otool_output, lib_dependencies):
                     yield lib, elements[1]
 
 
-def _update_shared_lib_paths(wheel: Path, shared_lib: Path):
+def _update_shared_lib_paths_macos(wheel: Path, shared_lib: Path):
     otool_output = run(["otool", "-l", shared_lib], check=True, capture_output=True, text=True)
     dependencies = list(_dependencies(wheel))
     old_entries = {lib: entry for lib, entry in _lib_install_names(otool_output.stdout, dependencies)}
@@ -93,12 +93,17 @@ def _update_shared_lib_paths(wheel: Path, shared_lib: Path):
         run(["install_name_tool", "-change", lib_path, new_lib_path, shared_lib], check=True)
 
 
+def _update_shared_lib_paths_linux(wheel: Path, shared_lib: Path):
+    run(["patchelf", "--set-rpath", "@ORIGIN/../.libs", shared_lib], check=True)
+
+
 def postprocess(wheel, dest_dir):
     """
     ``delocate`` doesn't take account of the data folder
     (see `Issue 149 <https://github.com/matthew-brett/delocate/issues/149>`_) when calculating library paths,
     so fix them up here. Also remove the reference to `Python`, as it will be found automatically in the environment
     """
+    _update_shared_lib_paths = _update_shared_lib_paths_macos if sys.platform == "Darwin" else _update_shared_lib_paths_linux
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")

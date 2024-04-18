@@ -65,12 +65,13 @@ environment-pass = [
 ]
 
 before-all=[
-  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
+  "yum install -y wget libedit-devel libxml2-devel ncurses-devel patchelf",
   "pip install wheel"
 ]
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",
-  "auditwheel repair -w {dest_dir} {wheel}"
+  "auditwheel repair -w {dest_dir} {wheel}",
+  "python edit-wheel.py postprocess {dest_dir}"
 ]
 
 [tool.cibuildwheel.macos]

@@ -65,7 +65,7 @@ index 5d62213c3f58..732bd3e0d0fc 100644
  set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
    "Path to the global lldbinit directory. Relative paths are resolved relative to the
 diff --git a/lldb/source/API/CMakeLists.txt b/lldb/source/API/CMakeLists.txt
-index 57cc44f76467..09f742fff3d9 100644
+index 57cc44f76467..9b187b126e6f 100644
 --- a/lldb/source/API/CMakeLists.txt
 +++ b/lldb/source/API/CMakeLists.txt
 @@ -127,7 +127,7 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
@@ -77,7 +77,7 @@ index 57cc44f76467..09f742fff3d9 100644
    set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
    set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
  endif()
-@@ -147,10 +147,14 @@ if(LLDB_ENABLE_PYTHON)
+@@ -147,10 +147,18 @@ if(LLDB_ENABLE_PYTHON)
      set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
        PROPERTY COMPILE_FLAGS " -Wno-unused-function")
    endif()
@@ -91,7 +91,11 @@ index 57cc44f76467..09f742fff3d9 100644
 +          PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
 +    endif()
 +    if (LLDB_SKIP_LINK_PYTHON)
-+      target_link_options(liblldb PRIVATE "LINKER:--unresolved-symbols=ignore-all")
++      if (APPLE)  
++        target_link_options(liblldb PRIVATE "LINKER:-undefined,dynamic_lookup")
++      else()  
++        target_link_options(liblldb PRIVATE "LINKER:--unresolved-symbols=ignore-all")
++      endif()  
 +    endif()    
    endif ()
  endif()
