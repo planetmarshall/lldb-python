@@ -94,7 +94,7 @@ def _update_shared_lib_paths_macos(wheel: Path, shared_lib: Path):
 
 
 def _update_shared_lib_paths_linux(wheel: Path, shared_lib: Path):
-    run(["patchelf", "--set-rpath", "@ORIGIN/../.libs", shared_lib], check=True)
+    run(["patchelf", "--set-rpath", "$ORIGIN/../.libs", shared_lib], check=True)
 
 
 def postprocess(wheel, dest_dir):
