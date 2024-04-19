@@ -81,7 +81,6 @@ repair-wheel-command=[
 ]
 
 [tool.cibuildwheel.macos]
-environment = { "CC" = "clang", "CXX" = "clang++", "AR" = "ar", "LD" = "lld"}
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",
   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
