@@ -9,9 +9,33 @@ on:
       - main
 
 jobs:
+  debug_build:
+    runs-on: macos-14
+    env:
+      CONAN_HOME: ${{ github.workspace }}/.conan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+      # You can test your matrix by printing the current Python version
+      - name: install conan
+        run: |
+          pip install conan
+          conan profile detect
+
+      - run: conan install . --build '*'
+
+      - run: |
+          find "${CONAN_HOME}" -name 'config.log' | xargs cat
+        if: always()
+
+
   build_wheels:
     name: Build wheels on ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
+    env:
+      CONAN_HOME: ${{ github.workspace }}/.conan
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
@@ -39,5 +63,5 @@ jobs:
 
       - name: Output debugging logs
         run: |
-          find ~/.conan2 -name 'config.log' | xargs cat
+          find "${CONAN_HOME}" -name 'config.log' | xargs cat
         if: always()
