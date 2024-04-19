@@ -36,3 +36,8 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
+
+      - name: Output debugging logs
+        run: |
+          find ~/.conan2 -name 'config.log' | xargs cat
+        if: always()
