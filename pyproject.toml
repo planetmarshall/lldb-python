@@ -61,7 +61,6 @@ test-requires = [
   "pytest",
   "cmake"
 ]
-test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
 skip="*-musilinux-*"
@@ -82,6 +81,7 @@ repair-wheel-command=[
 
 [tool.cibuildwheel.macos]
 # workaround for the macos environment on Github Workflow
+test-command = "pytest {project}/test"
 environment = { "CC" = "/usr/bin/gcc" }
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",
