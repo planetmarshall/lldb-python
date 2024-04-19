@@ -13,7 +13,8 @@ jobs:
     name: Build wheels on ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
     env:
-      CONAN_HOME: ${{ github.workspace }}/.conan
+      CCACHE_DIR: /tmp/ccache
+      CCACHE_MAXSIZE: 2G
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
@@ -27,12 +28,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup CCache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.17.0
         env:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
           CIBW_BUILD: ${{ matrix.python_version }}
+
+      - name: Output some ccache stats
+        run: ccache --show-stats
+        if: always()
 
       - uses: actions/upload-artifact@v4
         with:

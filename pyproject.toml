@@ -40,6 +40,8 @@ wheel.install-dir = "/data"
 [tool.scikit-build.cmake.define]
 CMAKE_PROJECT_TOP_LEVEL_INCLUDES="conan_provider.cmake"
 CMAKE_FIND_PACKAGE_PREFER_CONFIG="ON"
+CMAKE_C_COMPILER_LAUNCHER="ccache"
+CMAKE_CXX_COMPILER_LAUNCHER="ccache"
 LLVM_ENABLE_PROJECTS = "clang;lldb"
 LLVM_TARGETS_TO_BUILD = {env="SKBUILD_LLVM_TARGETS_TO_BUILD", default="X86"}
 LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
@@ -63,8 +65,10 @@ test-requires = [
 ]
 
 [tool.cibuildwheel.linux]
-skip="*-musilinux-*"
+environment = { "CCACHE_DIR" = "/host/tmp/ccache" }
+skip="*-musilinux_*"
 environment-pass = [
+  "CCACHE_DIR",
   "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
   "SKBUILD_LLVM_RAM_PER_LINK_JOB"
 ]
