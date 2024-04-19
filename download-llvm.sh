@@ -19,5 +19,10 @@ echo "${TARBALL_SHA256}  ${TARBALL}" | sha256sum --check
 tar -xf "${TARBALL}"
 rm ${TARBALL}
 mv "llvm-project-${COMMIT_SHA}" llvm-project
-patch -d llvm-project -p1 < python-linking.patch
+patch -d llvm-project -p1 < lldb.patch
 
+CONAN_PROVIDER_COMMIT_SHA=82284c0204e87f36c7d5706bf2963bae735904a4
+wget https://raw.githubusercontent.com/conan-io/cmake-conan/${CONAN_PROVIDER_COMMIT_SHA}/conan_provider.cmake \
+  -O llvm-project/llvm/conan_provider.cmake
+
+cp -r conanfile.txt llvm-project/llvm

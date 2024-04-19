@@ -67,9 +67,19 @@ def preprocess(wheel, dest_dir):
         _repack_wheel(wheel_dir, dest_dir)
 
 
-def _dependencies(wheel_file):
-    result = run(["delocate-listdeps", wheel_file], check=True, capture_output=True, text=True)
-    return [os.path.basename(lib).split(".")[0] for lib in result.stdout.splitlines()]
+def _modified_dependencies(shared_lib) -> Iterable[Path]:
+    """
+    a generator returning the names of library paths that the delocate tool
+    has modified
+    """
+    result = run(["otool", "-L", shared_lib], check=True, capture_output=True, text=True)
+    rows = result.stdout.splitlines()
+    # skip the header
+    for row in rows[1:]:
+        # each entry is of the form '<lib path> <compatibility info>'
+        lib_path = Path(row.lstrip().split()[0])
+        if "lldb_python.dylibs" in lib_path.parts:
+            yield lib_path.name
 
 
 def _lib_install_names(otool_output, lib_dependencies):
@@ -82,18 +92,18 @@ def _lib_install_names(otool_output, lib_dependencies):
                     yield lib, elements[1]
 
 
-def _update_shared_lib_paths_macos(wheel: Path, shared_lib: Path):
+def _update_shared_lib_paths_macos(shared_lib: Path):
     otool_output = run(["otool", "-l", shared_lib], check=True, capture_output=True, text=True)
-    dependencies = list(_dependencies(wheel))
+    dependencies = list(_modified_dependencies(shared_lib))
     old_entries = {lib: entry for lib, entry in _lib_install_names(otool_output.stdout, dependencies)}
 
     for lib, lib_path in old_entries.items():
         new_lib_path = f"@loader_path/../lldb_python.dylibs/{lib}"
-        print(f"Fixing {lib} to {new_lib_path}")
+        print(f"{shared_lib.name}: Fixing {lib} to {new_lib_path}")
         run(["install_name_tool", "-change", lib_path, new_lib_path, shared_lib], check=True)
 
 
-def _update_shared_lib_paths_linux(wheel: Path, shared_lib: Path):
+def _update_shared_lib_paths_linux(shared_lib: Path):
     print(f"Updating shared library paths in {shared_lib}")
     run(["patchelf", "--set-rpath", "$ORIGIN/../lldb_python.libs", shared_lib], check=True)
 
@@ -108,9 +118,9 @@ def postprocess(wheel, dest_dir):
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")
-        _update_shared_lib_paths(wheel, shared_lib)
+        _update_shared_lib_paths(shared_lib)
         lldb_server = _find_file_or_folder(wheel_dir, "lldb-server")
-        _update_shared_lib_paths(wheel, lldb_server)
+        _update_shared_lib_paths(lldb_server)
         os.makedirs(dest_dir, exist_ok=True)
         _repack_wheel(wheel_dir, dest_dir)
 
