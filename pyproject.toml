@@ -65,16 +65,16 @@ test-requires = [
 ]
 
 [tool.cibuildwheel.linux]
-environment = { "CCACHE_DIR" = "/host/tmp/ccache" }
+environment = { "CCACHE_DIR" = "/host/tmp/ccache", "CONAN_USER_HOME" = "/host/tmp/conan" }
 skip="*-musilinux_*"
 environment-pass = [
   "CCACHE_DIR",
+  "CONAN_USER_HOME",
   "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
   "SKBUILD_LLVM_RAM_PER_LINK_JOB"
 ]
-
 before-all=[
-  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
+  "yum install -y wget libedit-devel libxml2-devel ncurses-devel ccache",
   "pip install patchelf wheel"
 ]
 repair-wheel-command=[
@@ -84,8 +84,11 @@ repair-wheel-command=[
 ]
 
 [tool.cibuildwheel.macos]
-# workaround for the macos environment on Github Workflow
+before-all=[
+  "brew install ccache"
+]
 test-command = "pytest {project}/test"
+# workaround for the macos environment on Github Workflow
 environment = { "CC" = "/usr/bin/gcc" }
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",

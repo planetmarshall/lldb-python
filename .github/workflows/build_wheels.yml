@@ -14,6 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: /tmp/ccache
+      CONAN_USER_HOME: /tmp/conan
       CCACHE_MAXSIZE: 2G
     strategy:
       matrix:
@@ -28,11 +29,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install conan
+        run: pip install conan
+
       - name: Setup CCache
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}
+          key: ccache-${{ runner.os }}
+
+      - name: Setup Conan Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_USER_HOME }}/p
+          key: conan-${{ runner.os }}
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.17.0
@@ -40,6 +55,10 @@ jobs:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
           CIBW_BUILD: ${{ matrix.python_version }}
+
+      - name: Clean the conan cache
+        run: conan cache clean
+        if: always()
 
       - name: Output some ccache stats
         run: ccache --show-stats
