@@ -53,9 +53,18 @@ index d62cced0d095..88b0da0d888c 100644
 +                                      ${PYTHON_REQUIRED_ARGS})
  endif()
 diff --git a/lldb/cmake/modules/LLDBConfig.cmake b/lldb/cmake/modules/LLDBConfig.cmake
-index 5d62213c3f58..732bd3e0d0fc 100644
+index 5d62213c3f58..e2f978c346e8 100644
 --- a/lldb/cmake/modules/LLDBConfig.cmake
 +++ b/lldb/cmake/modules/LLDBConfig.cmake
+@@ -51,7 +51,7 @@ macro(add_optional_dependency variable description package found)
+ endmacro()
+ 
+ add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
+-add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
++add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" editline LibEdit_FOUND)
+ add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
+ add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
+ add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 @@ -69,6 +69,7 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
    "Fail to configure if certain requirements are not met for testing." OFF)
  option(LLDB_TEST_USE_VENDOR_PACKAGES
@@ -64,6 +73,17 @@ index 5d62213c3f58..732bd3e0d0fc 100644
  
  set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
    "Path to the global lldbinit directory. Relative paths are resolved relative to the
+@@ -142,8 +143,8 @@ endif()
+ # Check if we libedit capable of handling wide characters (built with
+ # '--enable-widec').
+ if (LLDB_ENABLE_LIBEDIT)
+-  set(CMAKE_REQUIRED_LIBRARIES ${LibEdit_LIBRARIES})
+-  set(CMAKE_REQUIRED_INCLUDES ${LibEdit_INCLUDE_DIRS})
++  set(CMAKE_REQUIRED_LIBRARIES ${editline_LIBRARIES})
++  set(CMAKE_REQUIRED_INCLUDES ${editline_INCLUDE_DIRS})
+   check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
+   set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
+   check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
 diff --git a/lldb/source/API/CMakeLists.txt b/lldb/source/API/CMakeLists.txt
 index 57cc44f76467..9b187b126e6f 100644
 --- a/lldb/source/API/CMakeLists.txt

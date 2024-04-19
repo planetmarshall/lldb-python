@@ -9,15 +9,17 @@ The Python API is normally distributed as part of the main LLDB package, but thi
 typically uses the System Python which can make it difficult to integrate into
 standalone Python projects that typically will use a virtual environment
 
-A small patch is made to the LLDB build to disable linking to the Python library.
-This is unnecessary when LLDB is being used as a Python extension module and makes
-the package more difficult to relocate.
+A small patch is made to the LLDB build to disable linking to the Python library,
+and to enable linking to static libraries provided by [conan](https://github.com/conan-io/conan).
+
+This makes it easier to distribute the LLDB Python bindings as a relocatable binary distribution.
 
 Installation
 ------------
 
 Download the appropriate wheel file for your platform and architecture and install
 using PIP.
+
 
 Example Usage
 -------------
@@ -34,10 +36,6 @@ Build
 Wheels are built using [scikit-build-core](https://github.com/scikit-build/scikit-build-core)
 and [cibuildwheel](https://github.com/pypa/cibuildwheel). Some post-build customization
 of the built wheel is done that could not be accomplished using these tools alone.
-
-In order to reduce the number of dynamic libraries required and make the binaries more
-robust to relocation, [conan](https://github.com/conan-io/conan) is used to build most of
-the LLDB dependencies as static libraries.
 
 ```
 ./download-llvm.sh
