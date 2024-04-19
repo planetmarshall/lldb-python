@@ -63,15 +63,15 @@ test-requires = [
 ]
 
 [tool.cibuildwheel.linux]
-environment = { "CCACHE_DIR" = "/host/tmp/ccache", "CONAN_USER_HOME" = "/host/tmp/conan" }
+environment = { "CONAN_HOME" = "/host/tmp/conan" }
 skip="*-musilinux_*"
 environment-pass = [
-  "CONAN_USER_HOME",
+  "CONAN_HOME",
   "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
   "SKBUILD_LLVM_RAM_PER_LINK_JOB"
 ]
 before-all=[
-  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
+  "yum install -y wget",
   "pip install patchelf wheel"
 ]
 repair-wheel-command=[
