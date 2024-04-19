@@ -9,12 +9,6 @@ on:
       - main
 
 jobs:
-  debug_build:
-    runs-on: macos-14
-    steps:
-      - run: xcode-select -p
-
-
   build_wheels:
     name: Build wheels on ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
@@ -27,7 +21,7 @@ jobs:
         python_version: ["cp310-*", "cp311-*", "cp312-*"]
         include:
           - os: macos-14
-            llvm_targets: "AArch64"
+            llvm_targets: "AArch64;X86"
             llvm_runtimes: "libcxx"
 
     steps:
@@ -49,8 +43,3 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
-
-      - name: Output debugging logs
-        run: |
-          find "${CONAN_HOME}" -name 'config.log' | xargs cat
-        if: always()

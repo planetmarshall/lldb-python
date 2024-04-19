@@ -81,6 +81,7 @@ repair-wheel-command=[
 ]
 
 [tool.cibuildwheel.macos]
+# workaround for the macos environment on Github Workflow
 environment = { "CC" = "/usr/bin/gcc" }
 repair-wheel-command=[
   "python edit-wheel.py preprocess {wheel}",

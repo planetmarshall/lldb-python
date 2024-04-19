@@ -35,10 +35,14 @@ Wheels are built using [scikit-build-core](https://github.com/scikit-build/sciki
 and [cibuildwheel](https://github.com/pypa/cibuildwheel). Some post-build customization
 of the built wheel is done that could not be accomplished using these tools alone.
 
+In order to reduce the number of dynamic libraries required and make the binaries more
+robust to relocation, [conan](https://github.com/conan-io/conan) is used to build most of
+the LLDB dependencies as static libraries.
+
 ```
 ./download-llvm.sh
 pipx run build -v --wheel
-./python edit-wheel.py preprocess dist/<wheel_file> --dest-dir out/
+./python edit-wheel.py preprocess dist/<wheel_file>
 ```
 
 Then to test the wheel
@@ -46,6 +50,6 @@ Then to test the wheel
 pip install -r requirements.txt
 python -m venv .venv
 source .venv/bin/activate
-pip install out/<wheel_file>
+pip install dist/<wheel_file>
 pytest -v test
 ```
