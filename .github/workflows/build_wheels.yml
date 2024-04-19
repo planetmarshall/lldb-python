@@ -37,8 +37,13 @@ jobs:
       - name: Install conan
         run: pip install conan
 
+      - name: Install ccache
+        run: brew install ccache
+        if: runner.os == 'macOS'
+
       - name: Setup CCache
         uses: actions/cache@v4
+        if: runner.os == 'macOS'
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}
@@ -62,7 +67,7 @@ jobs:
 
       - name: Output some ccache stats
         run: ccache --show-stats
-        if: always()
+        if: always() && runner.os == 'macOS'
 
       - uses: actions/upload-artifact@v4
         with:
