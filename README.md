@@ -1,6 +1,8 @@
 lldb-python
 ===========
 
+![build and publish](https://github.com/planetmarshall/lldb-python/actions/workflows/build_wheels.yml/badge.svg)
+
 An unofficial self contained distribution of the 
 [LLDB Python Bindings](https://lldb.llvm.org/python_api.html) to ease integration of the
 LLDB debugger into external Python projects.
