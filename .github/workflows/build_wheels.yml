@@ -64,7 +64,9 @@ jobs:
           CIBW_BUILD: ${{ matrix.python_version }}
 
       - name: Clean the conan cache
-        run: conan cache clean
+        run: |
+          sudo chown ${USER} --recursive ${CONAN_HOME}
+          conan cache clean
         if: always()
 
       - name: Output some ccache stats
