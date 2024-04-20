@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} for ${{ matrix.python_version }}
+    name: Build ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: /tmp/ccache
@@ -20,7 +20,7 @@ jobs:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
         os: [macos-14, ubuntu-22.04]
-        python_version: ["cp310-*", "cp311-*", "cp312-*"]
+        python_version: ["cp310", "cp311", "cp312"]
         include:
           - os: macos-14
             llvm_targets: "AArch64;X86"
@@ -45,8 +45,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}
+          key: ccache-${{ runner.os }}-${{ matrix.python_version }}
           save-always: true
+          restore-keys: |
+            ccache-${{ runner.os }}
+            
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
@@ -60,7 +63,7 @@ jobs:
         env:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
-          CIBW_BUILD: ${{ matrix.python_version }}
+          CIBW_BUILD: '${{ matrix.python_version }}-*'
 
       - name: Prepare the caches
         run: |
