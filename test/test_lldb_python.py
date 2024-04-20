@@ -11,20 +11,17 @@ def _launch_process(target: SBTarget) -> SBProcess:
     return process
 
 
-def test_create_debugger():
-    debugger = SBDebugger.Create()
+def test_create_debugger(debugger):
     assert debugger is not None
 
 
-def test_create_target(executable):
-    debugger: SBDebugger = SBDebugger.Create()
+def test_create_target(debugger, executable):
     target: SBTarget = debugger.CreateTargetWithFileAndArch(executable, lldb.LLDB_ARCH_DEFAULT)
 
     assert target is not None
 
 
-def test_launch_process(executable):
-    debugger: SBDebugger = SBDebugger.Create()
+def test_launch_process(debugger, executable):
     target: SBTarget = debugger.CreateTargetWithFileAndArch(executable, lldb.LLDB_ARCH_DEFAULT)
     process: SBProcess = _launch_process(target)
 
@@ -32,8 +29,7 @@ def test_launch_process(executable):
     assert process.id != 0
 
 
-def test_launch_process_with_breakpoint(executable):
-    debugger: SBDebugger = SBDebugger.Create()
+def test_launch_process_with_breakpoint(debugger, executable):
     debugger.SetAsync(False)
     target: SBTarget = debugger.CreateTargetWithFileAndArch(executable, lldb.LLDB_ARCH_DEFAULT)
     bp: SBBreakpoint = target.BreakpointCreateByName("main", target.GetExecutable().GetFilename())

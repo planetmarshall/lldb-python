@@ -63,6 +63,7 @@ test-requires = [
     "pytest",
     "cmake"
 ]
+test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
 environment = { "CONAN_HOME" = "/host/tmp/conan", "CCACHE_DIR" = "/host/tmp/ccache" }
@@ -91,7 +92,6 @@ before-all = [
 ]
 # this is necessary to build the conan dependencies on macos
 environment = { "CC" = "/usr/bin/gcc" }
-test-command = "pytest {project}/test"
 repair-wheel-command = [
     "python edit-wheel.py preprocess {wheel}",
     "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
