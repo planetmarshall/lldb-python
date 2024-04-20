@@ -1,4 +1,4 @@
-name: Build
+name: Build and Publish
 
 on: 
   pull_request:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build_wheels:
+  build-wheels:
     name: Build ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
     env:
@@ -77,5 +77,90 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os }}-${{ matrix.python_version }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    needs:
+      - build-wheels
+    runs-on: ubuntu-22.04
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/lldb-python
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-to-pypi:
+      name: Publish to PyPi
+      if: startsWith(github.ref, 'refs/tags/')
+      needs:
+        - build-wheels
+      runs-on: ubuntu-22.04
+
+      environment:
+        name: pypi
+        url: https://pypi.org/p/lldb-python
+      permissions:
+        id-token: write
+
+      steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: >-
+      Sign the Python distribution with Sigstore
+      and upload them to GitHub Release
+    needs:
+      - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Sign the dists with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v1.2.3
+        with:
+          inputs: >-
+            ./dist/*.whl
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create
+          '${{ github.ref_name }}'
+          --repo '${{ github.repository }}'
+          --notes ""
+      - name: Upload artifact signatures to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          gh release upload
+          '${{ github.ref_name }}' dist/**
+          --repo '${{ github.repository }}'
