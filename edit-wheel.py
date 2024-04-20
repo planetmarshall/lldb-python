@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 from glob import glob
@@ -42,27 +42,6 @@ def _extra_libs(data_dir: Path) -> Iterable[Path]:
                 yield Path(root) / filename
 
 
-def _fixup_record_file(wheel_dir: Path):
-    def updated_records(rows: Iterable[str], lldb_server_path):
-        for row in rows:
-            if "liblldb" in row:
-                continue
-
-            if "lldb-server" in row:
-                yield re.sub(r"^\S+lldb-server", lldb_server_path, row.strip(), 1)
-            else:
-                yield row.strip()
-
-    record_file = _find_file_or_folder(wheel_dir, "RECORD")
-    new_lldb_server_path = _find_file_or_folder(wheel_dir, "lldb-server")
-    new_lldb_server_relative_path = os.path.relpath(new_lldb_server_path, wheel_dir)
-    with open(record_file, 'r') as fp:
-        records = fp.readlines()
-
-    with open(record_file, 'w') as fp:
-        fp.writelines(updated_records(records, new_lldb_server_relative_path))
-
-
 def _repack_wheel(src_dir: Path, dest_dir: Path):
     run(["wheel", "pack", "--dest-dir", dest_dir, src_dir])
 
@@ -71,7 +50,7 @@ def preprocess(wheel, dest_dir):
     """
     Remove extra lib files installed by LLVM. These are normally symlinks but the become files
     in the wheel. We can't just not install them as otherwise the _lldb lib ins not installed
-    which we need.
+    which we need. Also move lldb-server to its expected location relative to the library
     """
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
@@ -84,17 +63,23 @@ def preprocess(wheel, dest_dir):
         print(f"moving bin folder")
         shutil.move(data_dir / "bin", site_packages_dir)
 
-        _fixup_record_file(wheel_dir)
         os.makedirs(dest_dir, exist_ok=True)
         _repack_wheel(wheel_dir, dest_dir)
 
 
-def _dependencies(wheel_file):
-    result = run(["delocate-listdeps", wheel_file], check=True, capture_output=True, text=True)
-    for lib in result.stdout.splitlines():
-        library_base_name = os.path.basename(lib).split(".")[0]
-        if "python" not in library_base_name.lower():
-            yield library_base_name
+def _modified_dependencies(shared_lib) -> Iterable[Path]:
+    """
+    a generator returning the names of library paths that the delocate tool
+    has modified
+    """
+    result = run(["otool", "-L", shared_lib], check=True, capture_output=True, text=True)
+    rows = result.stdout.splitlines()
+    # skip the header
+    for row in rows[1:]:
+        # each entry is of the form '<lib path> <compatibility info>'
+        lib_path = Path(row.lstrip().split()[0])
+        if "lldb_python.dylibs" in lib_path.parts:
+            yield lib_path.name
 
 
 def _lib_install_names(otool_output, lib_dependencies):
@@ -107,15 +92,20 @@ def _lib_install_names(otool_output, lib_dependencies):
                     yield lib, elements[1]
 
 
-def _update_shared_lib_paths(wheel: Path, shared_lib: Path):
+def _update_shared_lib_paths_macos(shared_lib: Path):
     otool_output = run(["otool", "-l", shared_lib], check=True, capture_output=True, text=True)
-    dependencies = list(_dependencies(wheel))
+    dependencies = list(_modified_dependencies(shared_lib))
     old_entries = {lib: entry for lib, entry in _lib_install_names(otool_output.stdout, dependencies)}
 
     for lib, lib_path in old_entries.items():
         new_lib_path = f"@loader_path/../lldb_python.dylibs/{lib}"
-        print(f"Fixing {lib} to {new_lib_path}")
+        print(f"{shared_lib.name}: Fixing {lib} to {new_lib_path}")
         run(["install_name_tool", "-change", lib_path, new_lib_path, shared_lib], check=True)
+
+
+def _update_shared_lib_paths_linux(shared_lib: Path):
+    print(f"Updating shared library paths in {shared_lib}")
+    run(["patchelf", "--set-rpath", "$ORIGIN/../lldb_python.libs", shared_lib], check=True)
 
 
 def postprocess(wheel, dest_dir):
@@ -124,10 +114,13 @@ def postprocess(wheel, dest_dir):
     (see `Issue 149 <https://github.com/matthew-brett/delocate/issues/149>`_) when calculating library paths,
     so fix them up here. Also remove the reference to `Python`, as it will be found automatically in the environment
     """
+    _update_shared_lib_paths = _update_shared_lib_paths_macos if sys.platform.lower() == "darwin" else _update_shared_lib_paths_linux
     with TemporaryDirectory() as tmp:
         wheel_dir = _unpack_wheel(Path(wheel), Path(tmp))
         shared_lib = _find_file_or_folder(wheel_dir, "*.so")
-        _update_shared_lib_paths(wheel, shared_lib)
+        _update_shared_lib_paths(shared_lib)
+        lldb_server = _find_file_or_folder(wheel_dir, "lldb-server")
+        _update_shared_lib_paths(lldb_server)
         os.makedirs(dest_dir, exist_ok=True)
         _repack_wheel(wheel_dir, dest_dir)
 

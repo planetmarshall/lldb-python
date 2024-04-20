@@ -1,0 +1,270 @@
+diff --git a/lldb/cmake/modules/FindPythonAndSwig.cmake b/lldb/cmake/modules/FindPythonAndSwig.cmake
+index d62cced0d095..88b0da0d888c 100644
+--- a/lldb/cmake/modules/FindPythonAndSwig.cmake
++++ b/lldb/cmake/modules/FindPythonAndSwig.cmake
+@@ -7,7 +7,7 @@
+ macro(FindPython3)
+   # Use PYTHON_HOME as a hint to find Python 3.
+   set(Python3_ROOT_DIR "${PYTHON_HOME}")
+-  find_package(Python3 COMPONENTS Interpreter Development)
++  find_package(Python3 COMPONENTS ${ARGV})
+   if(Python3_FOUND AND Python3_Interpreter_FOUND)
+ 
+     # The install name for the Python 3 framework in Xcode is relative to
+@@ -34,11 +34,19 @@ macro(FindPython3)
+   endif()
+ endmacro()
+ 
+-if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
+-  set(PYTHONANDSWIG_FOUND TRUE)
++if(Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
++  if(LLDB_SKIP_LINK_PYTHON)  
++    set(PYTHONANDSWIG_FOUND TRUE)
++  elseif (Python3_LIBRARIES)
++    set(PYTHONANDSWIG_FOUND TRUE)
++  endif()  
+ else()
+   if (LLDB_ENABLE_SWIG)
+-    FindPython3()
++      if (LLDB_SKIP_LINK_PYTHON)  
++          FindPython3(Interpreter Development.Module)
++      else()  
++          FindPython3(Interpreter Development)
++      endif()    
+   else()
+     message(STATUS "SWIG 4 or later is required for Python support in LLDB but could not be found")
+   endif()
+@@ -55,12 +63,13 @@ else()
+   endif()
+ 
+   include(FindPackageHandleStandardArgs)
++  set(PYTHON_REQUIRED_ARGS Python3_INCLUDE_DIRS Python3_EXECUTABLE LLDB_ENABLE_SWIG)
++  if (NOT LLDB_SKIP_LINK_PYTHON)
++    list(APPEND PYTHON_REQUIRED_ARGS Python3_LIBRARIES)
++  endif()  
+   find_package_handle_standard_args(PythonAndSwig
+                                     FOUND_VAR
+                                       PYTHONANDSWIG_FOUND
+                                     REQUIRED_VARS
+-                                      Python3_LIBRARIES
+-                                      Python3_INCLUDE_DIRS
+-                                      Python3_EXECUTABLE
+-                                      LLDB_ENABLE_SWIG)
++                                      ${PYTHON_REQUIRED_ARGS})
+ endif()
+diff --git a/lldb/cmake/modules/LLDBConfig.cmake b/lldb/cmake/modules/LLDBConfig.cmake
+index 5d62213c3f58..e2f978c346e8 100644
+--- a/lldb/cmake/modules/LLDBConfig.cmake
++++ b/lldb/cmake/modules/LLDBConfig.cmake
+@@ -51,7 +51,7 @@ macro(add_optional_dependency variable description package found)
+ endmacro()
+ 
+ add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
+-add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
++add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" editline LibEdit_FOUND)
+ add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
+ add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
+ add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
+@@ -69,6 +69,7 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
+   "Fail to configure if certain requirements are not met for testing." OFF)
+ option(LLDB_TEST_USE_VENDOR_PACKAGES
+   "Use packages from lldb/third_party/Python/module instead of system deps." OFF)
++option(LLDB_SKIP_LINK_PYTHON "Dont link to the Python library, so that liblldb can be used as a Python extension module" ON)
+ 
+ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
+   "Path to the global lldbinit directory. Relative paths are resolved relative to the
+@@ -142,8 +143,8 @@ endif()
+ # Check if we libedit capable of handling wide characters (built with
+ # '--enable-widec').
+ if (LLDB_ENABLE_LIBEDIT)
+-  set(CMAKE_REQUIRED_LIBRARIES ${LibEdit_LIBRARIES})
+-  set(CMAKE_REQUIRED_INCLUDES ${LibEdit_INCLUDE_DIRS})
++  set(CMAKE_REQUIRED_LIBRARIES ${editline_LIBRARIES})
++  set(CMAKE_REQUIRED_INCLUDES ${editline_INCLUDE_DIRS})
+   check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
+   set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
+   check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
+diff --git a/lldb/source/API/CMakeLists.txt b/lldb/source/API/CMakeLists.txt
+index 57cc44f76467..9b187b126e6f 100644
+--- a/lldb/source/API/CMakeLists.txt
++++ b/lldb/source/API/CMakeLists.txt
+@@ -127,7 +127,7 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
+   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+ endif()
+ 
+-if(Python3_RPATH)
++if(Python3_RPATH AND NOT LLDB_SKIP_LINK_PYTHON)
+   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
+   set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
+ endif()
+@@ -147,10 +147,18 @@ if(LLDB_ENABLE_PYTHON)
+     set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
+       PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+   endif()
+-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
+-      NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
+-      PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
++  if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
++    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
++        set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
++          PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
++    endif()
++    if (LLDB_SKIP_LINK_PYTHON)
++      if (APPLE)  
++        target_link_options(liblldb PRIVATE "LINKER:-undefined,dynamic_lookup")
++      else()  
++        target_link_options(liblldb PRIVATE "LINKER:--unresolved-symbols=ignore-all")
++      endif()  
++    endif()    
+   endif ()
+ endif()
+ 
+diff --git a/lldb/source/Core/CMakeLists.txt b/lldb/source/Core/CMakeLists.txt
+index 10525ac39e6e..8871d20fc950 100644
+--- a/lldb/source/Core/CMakeLists.txt
++++ b/lldb/source/Core/CMakeLists.txt
+@@ -10,7 +10,7 @@ set(LLDB_CURSES_LIBS)
+ set(LLDB_LIBEDIT_LIBS)
+ 
+ if (LLDB_ENABLE_CURSES)
+-  list(APPEND LLDB_CURSES_LIBS ${PANEL_LIBRARIES} ${CURSES_LIBRARIES})
++  list(APPEND LLDB_CURSES_LIBS ${Curses_LIBRARIES})
+   if(LLVM_ENABLE_TERMINFO)
+     list(APPEND LLDB_CURSES_LIBS ${Terminfo_LIBRARIES})
+   endif()
+@@ -107,5 +107,5 @@ add_dependencies(lldbCore
+ set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 5)
+ 
+ if (LLDB_ENABLE_CURSES)
+-  target_include_directories(lldbCore PRIVATE ${CURSES_INCLUDE_DIRS})
++  target_include_directories(lldbCore PRIVATE ${Curses_INCLUDE_DIRS})
+ endif()
+diff --git a/lldb/source/Host/CMakeLists.txt b/lldb/source/Host/CMakeLists.txt
+index c2e091ee8555..6584a3bfa55c 100644
+--- a/lldb/source/Host/CMakeLists.txt
++++ b/lldb/source/Host/CMakeLists.txt
+@@ -147,17 +147,17 @@ if (HAVE_LIBDL)
+   list(APPEND EXTRA_LIBS ${CMAKE_DL_LIBS})
+ endif()
+ if (LLDB_ENABLE_LIBEDIT)
+-  list(APPEND EXTRA_LIBS LibEdit::LibEdit)
++  list(APPEND EXTRA_LIBS editline::editline)
+ endif()
+ if (LLDB_ENABLE_LZMA)
+-  list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
++  list(APPEND EXTRA_LIBS ${LibLZMA_LIBRARIES})
+ endif()
+ if (WIN32)
+   list(APPEND LLDB_SYSTEM_LIBS psapi)
+ endif()
+ 
+ if (LLDB_ENABLE_LIBEDIT)
+-  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
++  list(APPEND LLDB_LIBEDIT_LIBS editline::editline)
+   if (LLVM_BUILD_STATIC)
+     list(APPEND LLDB_SYSTEM_LIBS gpm)
+   endif()
+diff --git a/lldb/source/Plugins/ScriptInterpreter/Python/CMakeLists.txt b/lldb/source/Plugins/ScriptInterpreter/Python/CMakeLists.txt
+index 7523d65abf0f..382222899a91 100644
+--- a/lldb/source/Plugins/ScriptInterpreter/Python/CMakeLists.txt
++++ b/lldb/source/Plugins/ScriptInterpreter/Python/CMakeLists.txt
+@@ -16,7 +16,7 @@ add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH
+ 
+ 
+ if (LLDB_ENABLE_LIBEDIT)
+-  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
++  list(APPEND LLDB_LIBEDIT_LIBS editline::editline)
+ endif()
+ 
+ add_subdirectory(Interfaces)
+diff --git a/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt b/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
+index b22abc49c92a..780f9e6cbd55 100644
+--- a/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
++++ b/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
+@@ -16,7 +16,7 @@ add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH
+ 
+ 
+ if (LLDB_ENABLE_LIBEDIT)
+-  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
++  list(APPEND LLDB_LIBEDIT_LIBS editline::editline)
+ endif()
+ 
+ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
+diff --git a/llvm/cmake/config-ix.cmake b/llvm/cmake/config-ix.cmake
+index bf1b110245bb..373c271764e1 100644
+--- a/llvm/cmake/config-ix.cmake
++++ b/llvm/cmake/config-ix.cmake
+@@ -137,7 +137,7 @@ if(LLVM_ENABLE_ZLIB)
+     # library on a 64-bit system which would result in a link-time failure.
+     cmake_push_check_state()
+     list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
+-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARY})
++    list(APPEND CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARIES})
+     check_symbol_exists(compress2 zlib.h HAVE_ZLIB)
+     cmake_pop_check_state()
+     if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON AND NOT HAVE_ZLIB)
+@@ -232,11 +232,11 @@ if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+     # Skip libedit if using ASan as it contains memory leaks.
+     if (LLVM_ENABLE_LIBEDIT AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
+       if(LLVM_ENABLE_LIBEDIT STREQUAL FORCE_ON)
+-        find_package(LibEdit REQUIRED)
++        find_package(editline REQUIRED)
+       else()
+-        find_package(LibEdit)
++        find_package(editline)
+       endif()
+-      set(HAVE_LIBEDIT "${LibEdit_FOUND}")
++      set(HAVE_LIBEDIT "${editline}")
+     else()
+       set(HAVE_LIBEDIT 0)
+     endif()
+diff --git a/llvm/lib/LineEditor/CMakeLists.txt b/llvm/lib/LineEditor/CMakeLists.txt
+index c4cd91cbb0cd..b95d073d9725 100644
+--- a/llvm/lib/LineEditor/CMakeLists.txt
++++ b/llvm/lib/LineEditor/CMakeLists.txt
+@@ -1,5 +1,5 @@
+ if(HAVE_LIBEDIT)
+-  set(link_libs LibEdit::LibEdit)
++  set(link_libs editline::editline)
+ endif()
+ 
+ add_llvm_component_library(LLVMLineEditor
+diff --git a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
+index e18beddf7bc5..782da46e5213 100644
+--- a/llvm/lib/Support/CMakeLists.txt
++++ b/llvm/lib/Support/CMakeLists.txt
+@@ -302,8 +302,7 @@ set(llvm_system_libs ${system_libs})
+ if(LLVM_ENABLE_ZLIB)
+   # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+   if(CMAKE_BUILD_TYPE)
+-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+-    get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION_${build_type})
++    set(zlib_library ${ZLIB_LIBRARIES})
+   endif()
+   if(NOT zlib_library)
+     get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
+@@ -315,8 +314,7 @@ endif()
+ if(LLVM_ENABLE_ZSTD)
+   # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+   if(CMAKE_BUILD_TYPE)
+-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+-    get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION_${build_type})
++	  set(zstd_library ${zstd_LIBRARIES})
+   endif()
+   if(NOT zstd_library)
+     get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
+diff --git a/llvm/lib/WindowsManifest/CMakeLists.txt b/llvm/lib/WindowsManifest/CMakeLists.txt
+index 910132a4c7de..079c2e2819e6 100644
+--- a/llvm/lib/WindowsManifest/CMakeLists.txt
++++ b/llvm/lib/WindowsManifest/CMakeLists.txt
+@@ -23,8 +23,7 @@ add_llvm_component_library(LLVMWindowsManifest
+ if(LLVM_ENABLE_LIBXML2)
+   # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+   if(CMAKE_BUILD_TYPE)
+-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+-    get_property(libxml2_library TARGET LibXml2::LibXml2 PROPERTY LOCATION_${build_type})
++      set(libxml2_library ${libxml2_LIBRARIES})
+   endif()
+   if(NOT libxml2_library)
+     get_property(libxml2_library TARGET LibXml2::LibXml2 PROPERTY LOCATION)

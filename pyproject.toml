@@ -1,15 +1,15 @@
 [project]
 name = "lldb-python"
 version = "19.0.0.dev1"
-authors = [{name = "Andrew Marshall", email = "planetmarshalluk@gmail.com"}]
+authors = [{ name = "Andrew Marshall", email = "planetmarshalluk@gmail.com" }]
 description = "Unofficial self contained distribution of the LLDB Python Bindings"
 readme = "README.md"
 keywords = ["lldb", "debugger", "llvm"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
-  "Intended Audience :: Developers",
-  "License :: OSI Approved :: LLVM-exception",
-  "Topic :: Software Development :: Debuggers"
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: LLVM-exception",
+    "Topic :: Software Development :: Debuggers"
 ]
 
 [project.urls]
@@ -18,8 +18,9 @@ Repository = "https://github.com/planetmarshall/lldb-python"
 
 [build-system]
 requires = [
-  "scikit-build-core",
-  "swig"
+    "conan",
+    "scikit-build-core",
+    "swig"
 ]
 build-backend = "scikit_build_core.build"
 
@@ -37,42 +38,61 @@ experimental = true
 wheel.install-dir = "/data"
 
 [tool.scikit-build.cmake.define]
+CMAKE_C_COMPILER_LAUNCHER = "ccache"
+CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
+CMAKE_PROJECT_TOP_LEVEL_INCLUDES = "conan_provider.cmake"
+CMAKE_FIND_PACKAGE_PREFER_CONFIG = "ON"
 LLVM_ENABLE_PROJECTS = "clang;lldb"
-LLVM_TARGETS_TO_BUILD = {env="SKBUILD_LLVM_TARGETS_TO_BUILD", default="X86"}
-LLVM_ENABLE_RUNTIMES = {env="SKBUILD_LLVM_ENABLE_RUNTIMES", default=""}
+LLVM_TARGETS_TO_BUILD = { env = "SKBUILD_LLVM_TARGETS_TO_BUILD", default = "X86" }
+LLVM_ENABLE_RUNTIMES = { env = "SKBUILD_LLVM_ENABLE_RUNTIMES", default = "" }
+LLVM_RAM_PER_COMPILE_JOB = { env = "SKBUILD_LLVM_RAM_PER_COMPILE_JOB", default = "" }
+LLVM_RAM_PER_LINK_JOB = { env = "SKBUILD_LLVM_RAM_PER_LINK_JOB", default = "" }
 LLVM_INCLUDE_EXAMPLES = "OFF"
+LLVM_ENABLE_ZLIB = "FORCE_ON"
+LLVM_ENABLE_ZSTD = "FORCE_ON"
+LLDB_SKIP_LINK_PYTHON = "ON"
 LLDB_ENABLE_LUA = "OFF"
 LLDB_ENABLE_PYTHON = "ON"
-LLVM_RAM_PER_COMPILE_JOB={env="SKBUILD_LLVM_RAM_PER_COMPILE_JOB", default="4096"}
-LLVM_RAM_PER_LINK_JOB={env="SKBUILD_LLVM_RAM_PER_LINK_LOB", default="16384"}
 
 [tool.cibuildwheel]
-archs="native"
+archs = "native"
 build-verbosity = 1
-before-build="./download-llvm.sh"
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:fpic"
+before-build = "./download-llvm.sh"
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
 test-requires = [
-  "pytest",
-  "cmake"
+    "pytest",
+    "cmake"
 ]
 test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
-before-all=[
-  "yum install -y wget libedit-devel libxml2-devel ncurses-devel",
-  "pip install wheel",
-  "pushd /opt/_internal",
-  "tar -xf static-libs-for-embedding-only.tar.xz",
-  "popd"
+environment = { "CONAN_HOME" = "/host/tmp/conan", "CCACHE_DIR" = "/host/tmp/ccache" }
+skip = "*-musllinux_*"
+environment-pass = [
+    "CONAN_HOME",
+    "CCACHE_DIR",
+    "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
+    "SKBUILD_LLVM_RAM_PER_LINK_JOB",
 ]
-repair-wheel-command=[
-  "python edit-wheel.py preprocess {wheel}",
-  "auditwheel repair -w {dest_dir} {wheel}"
+before-all = [
+    "yum install -y wget",
+    "./download-install-ccache.sh",
+    "ccache --version",
+    "pip install patchelf wheel"
+]
+repair-wheel-command = [
+    "python edit-wheel.py preprocess {wheel}",
+    "auditwheel repair -w {dest_dir} {wheel}",
+    "python edit-wheel.py postprocess {dest_dir}"
 ]
 
 [tool.cibuildwheel.macos]
-repair-wheel-command=[
-  "python edit-wheel.py preprocess {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} --exclude Python -w {dest_dir} -v {wheel}",
-  "python edit-wheel.py postprocess {dest_dir}"
+before-all = [
+    "brew install ccache"
+]
+# this is necessary to build the conan dependencies on macos
+environment = { "CC" = "/usr/bin/gcc" }
+repair-wheel-command = [
+    "python edit-wheel.py preprocess {wheel}",
+    "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 ]

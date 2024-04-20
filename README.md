@@ -9,11 +9,17 @@ The Python API is normally distributed as part of the main LLDB package, but thi
 typically uses the System Python which can make it difficult to integrate into
 standalone Python projects that typically will use a virtual environment
 
+A small patch is made to the LLDB build to disable linking to the Python library,
+and to enable linking to static libraries provided by [conan](https://github.com/conan-io/conan).
+
+This makes it easier to distribute the LLDB Python bindings as a relocatable binary distribution.
+
 Installation
 ------------
 
 Download the appropriate wheel file for your platform and architecture and install
 using PIP.
+
 
 Example Usage
 -------------
@@ -34,7 +40,7 @@ of the built wheel is done that could not be accomplished using these tools alon
 ```
 ./download-llvm.sh
 pipx run build -v --wheel
-./python edit-wheel.py preprocess dist/<wheel_file> --dest-dir out/
+./python edit-wheel.py preprocess dist/<wheel_file>
 ```
 
 Then to test the wheel
@@ -42,6 +48,6 @@ Then to test the wheel
 pip install -r requirements.txt
 python -m venv .venv
 source .venv/bin/activate
-pip install out/<wheel_file>
+pip install dist/<wheel_file>
 pytest -v test
 ```
