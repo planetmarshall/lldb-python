@@ -43,7 +43,6 @@ jobs:
 
       - name: Setup CCache
         uses: actions/cache@v4
-        if: runner.os == 'macOS'
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}
@@ -63,9 +62,10 @@ jobs:
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
           CIBW_BUILD: ${{ matrix.python_version }}
 
-      - name: Clean the conan cache
+      - name: Prepare the caches
         run: |
-          sudo chown ${USER} --recursive ${CONAN_HOME}
+          sudo chown -R ${USER} ${CONAN_HOME}
+          sudo chown -R ${USER} ${CCACHE_DIR}
           conan cache clean
         if: always()
 
