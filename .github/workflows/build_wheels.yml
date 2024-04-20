@@ -78,7 +78,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ matrix.python_version }}-${{ strategy.job-index }}
-          path: wheelhouse/*.whl
+          path: ./wheelhouse/*.whl
 
   publish-to-testpypi:
     name: Publish to TestPyPI
@@ -95,11 +95,10 @@ jobs:
 
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
-          path: wheelhouse/
-
+          path: dist/
       - name: Publish distribution to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -121,18 +120,16 @@ jobs:
 
       steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
-          path: wheelhouse/
+          path: dist/
 
       - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    name: >-
-      Sign the Python distribution with Sigstore
-      and upload them to GitHub Release
+    name: Make Github Release
     needs:
       - publish-to-pypi
 
@@ -144,16 +141,16 @@ jobs:
 
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
-          path: wheelhouse/
+          path: dist/
 
       - name: Sign the dists with Sigstore
         uses: sigstore/gh-action-sigstore-python@v1.2.3
         with:
           inputs: >-
-            ./wheelhouse/*.whl
+            ./dist/*.whl
 
       - name: Create GitHub Release
         env:
