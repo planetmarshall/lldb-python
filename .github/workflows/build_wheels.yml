@@ -133,7 +133,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist/
-          pattern: '*.whl'
+          pattern: 'cibw-wheels-*'
 
       - name: move wheels to package dir
         run: |
@@ -161,13 +161,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist/
-          pattern: '*.whl'
+          pattern: 'cibw-wheels-*'
+
+      - name: move wheels to package dir
+        run: |
+          mkdir wheels
+          find dist -name '*.whl' -print0 | xargs -0 -I% mv % wheels/
 
       - name: Sign the dists with Sigstore
         uses: sigstore/gh-action-sigstore-python@v1.2.3
         with:
           inputs: >-
-            ./dist/*.whl
+            ./wheels/*.whl
 
       - name: Create GitHub Release
         env:
@@ -183,5 +188,5 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           gh release upload
-          '${{ github.ref_name }}' dist/**
+          '${{ github.ref_name }}' wheels/**
           --repo '${{ github.repository }}'
