@@ -45,8 +45,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install conan
+        run: pip install conan
+
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}
+          verbose: '2'
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
@@ -72,8 +78,6 @@ jobs:
 
       - name: Prepare the caches
         run: |
-          mkdir -p ${CONAN_HOME}
-          mkdir -p ${CCACHE_DIR}
           sudo chown -R ${USER} ${CONAN_HOME}
           sudo chown -R ${USER} ${CCACHE_DIR}
           conan cache clean

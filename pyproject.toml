@@ -67,7 +67,10 @@ test-requires = [
 test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
-environment = { "CONAN_HOME" = "/host/tmp/conan", "CCACHE_DIR" = "/host/tmp/ccache" }
+environment.CONAN_HOME = "/host/tmp/conan"
+environment.CCACHE_DIR = "/host/tmp/ccache"
+environment.CCACHE_SLOPPINESS = "pch_defines,time_macros"
+
 skip = "*-musllinux_*"
 environment-pass = [
     "CONAN_HOME",
@@ -90,7 +93,8 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.macos]
 before-all = [
-    "brew install ccache"
+    "brew install ccache",
+    "pip install wheel"
 ]
 repair-wheel-command = [
     "python edit-wheel.py preprocess {wheel}",
