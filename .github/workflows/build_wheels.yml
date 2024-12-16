@@ -58,6 +58,8 @@ jobs:
 
       - name: Prepare the caches
         run: |
+          mkdir -p ${CONAN_HOME}
+          mkdir -p ${CCACHE_DIR}
           sudo chown -R ${USER} ${CONAN_HOME}
           sudo chown -R ${USER} ${CCACHE_DIR}
           conan cache clean
