@@ -1,6 +1,6 @@
 [project]
 name = "lldb-python"
-version = "19.0.0.dev1"
+version = "19.1.5"
 authors = [{ name = "Andrew Marshall", email = "planetmarshalluk@gmail.com" }]
 description = "Unofficial self contained distribution of the LLDB Python Bindings"
 readme = "README.md"
