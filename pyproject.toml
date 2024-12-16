@@ -83,9 +83,9 @@ before-all = [
     "yum install -y wget",
     "./download-install-ccache.sh",
     "ccache --version",
-    "pip install patchelf wheel"
 ]
 repair-wheel-command = [
+    "pip install patchelf wheel",
     "python edit-wheel.py preprocess {wheel}",
     "auditwheel repair -w {dest_dir} {wheel}",
     "python edit-wheel.py postprocess {dest_dir}"
@@ -93,10 +93,10 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.macos]
 before-all = [
-    "brew install ccache",
-    "pip install wheel"
+    "brew install ccache"
 ]
 repair-wheel-command = [
+    "pip install wheel",
     "python edit-wheel.py preprocess {wheel}",
     "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 ]
