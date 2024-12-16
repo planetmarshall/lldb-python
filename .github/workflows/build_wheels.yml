@@ -14,10 +14,16 @@ jobs:
   build-wheels:
     name: Build ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
     env:
       CCACHE_DIR: /tmp/ccache
       CONAN_HOME: /tmp/conan
       CCACHE_MAXSIZE: 2G
+
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
@@ -48,13 +54,21 @@ jobs:
           path: ${{ env.CONAN_HOME }}/p
           key: conan-${{ runner.os }}
 
+      - name: Setup environment variables
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            echo "PROJECT_ROOT=${{ github.workspace }}" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_ROOT=/project" >> "$GITHUB_ENV"
+          fi
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
         env:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
           CIBW_BUILD: '${{ matrix.python_version }}-*'
-          CONAN_HOST_PROFILE: ${{ github.workspace }}/.github/conan/${{ matrix.profile }}
+          CONAN_HOST_PROFILE: ${{ env.PROJECT_ROOT }}/.github/conan/${{ matrix.profile }}
 
       - name: Prepare the caches
         run: |
