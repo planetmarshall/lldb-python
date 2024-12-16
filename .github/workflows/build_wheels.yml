@@ -18,6 +18,7 @@ jobs:
       CCACHE_DIR: /tmp/ccache
       CONAN_HOME: /tmp/conan
       CCACHE_MAXSIZE: 2G
+      CONAN_HOST_PROFILE: .github/conan/${{ matrix.profile }}
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
@@ -25,8 +26,11 @@ jobs:
         python_version: ["cp310", "cp311", "cp312"]
         include:
           - os: macos-14
+            profile: macos-armv8
             llvm_targets: "AArch64;X86"
             llvm_runtimes: "libcxx"
+          - os: ubuntu-22.04
+            profile: default
 
     steps:
       - uses: actions/checkout@v4

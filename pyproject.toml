@@ -42,6 +42,7 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_PROJECT_TOP_LEVEL_INCLUDES = "conan_provider.cmake"
 CMAKE_FIND_PACKAGE_PREFER_CONFIG = "ON"
+CONAN_HOST_PROFILE = { env = "CONAN_HOST_PROFILE", default = "default" }
 LLVM_ENABLE_PROJECTS = "clang;lldb"
 LLVM_TARGETS_TO_BUILD = { env = "SKBUILD_LLVM_TARGETS_TO_BUILD", default = "X86" }
 LLVM_ENABLE_RUNTIMES = { env = "SKBUILD_LLVM_ENABLE_RUNTIMES", default = "" }
@@ -70,6 +71,7 @@ environment = { "CONAN_HOME" = "/host/tmp/conan", "CCACHE_DIR" = "/host/tmp/ccac
 skip = "*-musllinux_*"
 environment-pass = [
     "CONAN_HOME",
+    "CONAN_HOST_PROFILE",
     "CCACHE_DIR",
     "SKBUILD_LLVM_RAM_PER_COMPILE_JOB",
     "SKBUILD_LLVM_RAM_PER_LINK_JOB",
