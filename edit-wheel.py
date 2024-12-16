@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+
 import sys
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 from glob import glob
 from pathlib import Path
 import os
-import re
 import shutil
 from subprocess import run
 from tempfile import TemporaryDirectory
@@ -13,7 +13,7 @@ from typing import Iterable
 
 
 def _unpack_wheel(wheel_file: Path, destination: Path) -> Path:
-    run(["wheel", "unpack", str(wheel_file), "--dest", destination], check=True)
+    run([sys.executable, "-m", "wheel", "unpack", str(wheel_file), "--dest", destination], check=True)
     pattern = "lldb_python*"
     wheel_dir = glob(str(destination / pattern))
     if len(wheel_dir) == 0:
@@ -43,7 +43,7 @@ def _extra_libs(data_dir: Path) -> Iterable[Path]:
 
 
 def _repack_wheel(src_dir: Path, dest_dir: Path):
-    run(["wheel", "pack", "--dest-dir", dest_dir, src_dir])
+    run([sys.executable, "-m", "wheel", "pack", "--dest-dir", dest_dir, src_dir])
 
 
 def preprocess(wheel, dest_dir):
