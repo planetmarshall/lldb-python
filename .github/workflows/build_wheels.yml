@@ -47,7 +47,6 @@ jobs:
         with:
           path: ${{ env.CONAN_HOME }}/p
           key: conan-${{ runner.os }}
-          save-always: true
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
