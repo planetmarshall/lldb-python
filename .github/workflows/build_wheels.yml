@@ -39,18 +39,8 @@ jobs:
       - name: Install conan
         run: pip install conan
 
-      - name: Install ccache
-        run: brew install ccache
-        if: runner.os == 'macOS'
-
       - name: Setup CCache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}-${{ matrix.python_version }}
-          save-always: true
-          restore-keys: |
-            ccache-${{ runner.os }}
+        uses: hendrikmuhs/ccache-action@v1.2
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
@@ -60,7 +50,7 @@ jobs:
           save-always: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v2.22.0
         env:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
@@ -72,10 +62,6 @@ jobs:
           sudo chown -R ${USER} ${CCACHE_DIR}
           conan cache clean
         if: always()
-
-      - name: Output some ccache stats
-        run: ccache --show-stats
-        if: always() && runner.os == 'macOS'
 
       - uses: actions/upload-artifact@v4
         with:
