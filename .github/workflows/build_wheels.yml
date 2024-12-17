@@ -51,14 +51,14 @@ jobs:
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}
+          key: ${{ matrix.profile }}-${{ matrix.python_version }}
           verbose: '2'
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
         with:
           path: ${{ env.CONAN_HOME }}/p
-          key: conan-${{ runner.os }}
+          key: conan-${{ matrix.profile }}
 
       - name: Setup environment variables
         run: |
