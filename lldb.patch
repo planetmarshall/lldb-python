@@ -53,10 +53,10 @@ index d62cced0d095..88b0da0d888c 100644
 +                                      ${PYTHON_REQUIRED_ARGS})
  endif()
 diff --git a/lldb/cmake/modules/LLDBConfig.cmake b/lldb/cmake/modules/LLDBConfig.cmake
-index 5d62213c3f58..e2f978c346e8 100644
+index a60921990cf7..8188985b5fb2 100644
 --- a/lldb/cmake/modules/LLDBConfig.cmake
 +++ b/lldb/cmake/modules/LLDBConfig.cmake
-@@ -51,7 +51,7 @@ macro(add_optional_dependency variable description package found)
+@@ -52,7 +52,7 @@ macro(add_optional_dependency variable description package found)
  endmacro()
  
  add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
@@ -65,15 +65,15 @@ index 5d62213c3f58..e2f978c346e8 100644
  add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
  add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
  add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
-@@ -69,6 +69,7 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
+@@ -69,6 +69,7 @@ option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb."
+ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
    "Fail to configure if certain requirements are not met for testing." OFF)
- option(LLDB_TEST_USE_VENDOR_PACKAGES
-   "Use packages from lldb/third_party/Python/module instead of system deps." OFF)
-+option(LLDB_SKIP_LINK_PYTHON "Dont link to the Python library, so that liblldb can be used as a Python extension module" ON)
  
++option(LLDB_SKIP_LINK_PYTHON "Dont link to the Python library, so that liblldb can be used as a Python extension module" ON)
  set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
    "Path to the global lldbinit directory. Relative paths are resolved relative to the
-@@ -142,8 +143,8 @@ endif()
+   directory containing the LLDB library.")
+@@ -141,8 +142,8 @@ endif()
  # Check if we libedit capable of handling wide characters (built with
  # '--enable-widec').
  if (LLDB_ENABLE_LIBEDIT)
@@ -85,10 +85,10 @@ index 5d62213c3f58..e2f978c346e8 100644
    set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
    check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
 diff --git a/lldb/source/API/CMakeLists.txt b/lldb/source/API/CMakeLists.txt
-index 57cc44f76467..9b187b126e6f 100644
+index a32bc58507d8..494570c8d54f 100644
 --- a/lldb/source/API/CMakeLists.txt
 +++ b/lldb/source/API/CMakeLists.txt
-@@ -127,7 +127,7 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
+@@ -153,7 +153,7 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
    set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
  endif()
  
@@ -97,7 +97,7 @@ index 57cc44f76467..9b187b126e6f 100644
    set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
    set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
  endif()
-@@ -147,10 +147,18 @@ if(LLDB_ENABLE_PYTHON)
+@@ -173,10 +173,18 @@ if(LLDB_ENABLE_PYTHON)
      set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
        PROPERTY COMPILE_FLAGS " -Wno-unused-function")
    endif()
@@ -121,7 +121,7 @@ index 57cc44f76467..9b187b126e6f 100644
  endif()
  
 diff --git a/lldb/source/Core/CMakeLists.txt b/lldb/source/Core/CMakeLists.txt
-index 10525ac39e6e..8871d20fc950 100644
+index dbc620b91b1e..0c3a454f498e 100644
 --- a/lldb/source/Core/CMakeLists.txt
 +++ b/lldb/source/Core/CMakeLists.txt
 @@ -10,7 +10,7 @@ set(LLDB_CURSES_LIBS)
@@ -129,11 +129,11 @@ index 10525ac39e6e..8871d20fc950 100644
  
  if (LLDB_ENABLE_CURSES)
 -  list(APPEND LLDB_CURSES_LIBS ${PANEL_LIBRARIES} ${CURSES_LIBRARIES})
-+  list(APPEND LLDB_CURSES_LIBS ${Curses_LIBRARIES})
-   if(LLVM_ENABLE_TERMINFO)
-     list(APPEND LLDB_CURSES_LIBS ${Terminfo_LIBRARIES})
++    list(APPEND LLDB_CURSES_LIBS ${Curses_LIBRARIES})
+   if (LLVM_BUILD_STATIC)
+     list(APPEND LLDB_CURSES_LIBS gpm)
    endif()
-@@ -107,5 +107,5 @@ add_dependencies(lldbCore
+@@ -105,5 +105,5 @@ add_dependencies(lldbCore
  set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 5)
  
  if (LLDB_ENABLE_CURSES)
@@ -179,7 +179,7 @@ index 7523d65abf0f..382222899a91 100644
  
  add_subdirectory(Interfaces)
 diff --git a/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt b/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
-index b22abc49c92a..780f9e6cbd55 100644
+index c60e4bb503a3..e3693bc21a14 100644
 --- a/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
 +++ b/lldb/source/Plugins/ScriptInterpreter/Python/Interfaces/CMakeLists.txt
 @@ -16,7 +16,7 @@ add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH
@@ -192,7 +192,7 @@ index b22abc49c92a..780f9e6cbd55 100644
  
  add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
 diff --git a/llvm/cmake/config-ix.cmake b/llvm/cmake/config-ix.cmake
-index bf1b110245bb..373c271764e1 100644
+index 0aae13e30f2a..5481328c70c9 100644
 --- a/llvm/cmake/config-ix.cmake
 +++ b/llvm/cmake/config-ix.cmake
 @@ -137,7 +137,7 @@ if(LLVM_ENABLE_ZLIB)
@@ -231,10 +231,10 @@ index c4cd91cbb0cd..b95d073d9725 100644
  
  add_llvm_component_library(LLVMLineEditor
 diff --git a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
-index e18beddf7bc5..782da46e5213 100644
+index f653379e3033..8acb5754110e 100644
 --- a/llvm/lib/Support/CMakeLists.txt
 +++ b/llvm/lib/Support/CMakeLists.txt
-@@ -302,8 +302,7 @@ set(llvm_system_libs ${system_libs})
+@@ -303,8 +303,7 @@ set(llvm_system_libs ${system_libs})
  if(LLVM_ENABLE_ZLIB)
    # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
    if(CMAKE_BUILD_TYPE)
@@ -244,7 +244,7 @@ index e18beddf7bc5..782da46e5213 100644
    endif()
    if(NOT zlib_library)
      get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
-@@ -315,8 +314,7 @@ endif()
+@@ -316,8 +315,7 @@ endif()
  if(LLVM_ENABLE_ZSTD)
    # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
    if(CMAKE_BUILD_TYPE)

@@ -5,7 +5,6 @@ from fnmatch import fnmatch
 from glob import glob
 from pathlib import Path
 import os
-import re
 import shutil
 from subprocess import run
 from tempfile import TemporaryDirectory

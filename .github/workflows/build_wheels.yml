@@ -14,10 +14,16 @@ jobs:
   build-wheels:
     name: Build ${{ matrix.os }} for ${{ matrix.python_version }}
     runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
     env:
       CCACHE_DIR: /tmp/ccache
       CONAN_HOME: /tmp/conan
       CCACHE_MAXSIZE: 2G
+
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
@@ -25,8 +31,11 @@ jobs:
         python_version: ["cp310", "cp311", "cp312"]
         include:
           - os: macos-14
+            profile: macos-armv8
             llvm_targets: "AArch64;X86"
             llvm_runtimes: "libcxx"
+          - os: ubuntu-22.04
+            profile: linux-x86_64
 
     steps:
       - uses: actions/checkout@v4
@@ -39,32 +48,33 @@ jobs:
       - name: Install conan
         run: pip install conan
 
-      - name: Install ccache
-        run: brew install ccache
-        if: runner.os == 'macOS'
-
       - name: Setup CCache
-        uses: actions/cache@v4
+        uses: hendrikmuhs/ccache-action@v1.2
         with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}-${{ matrix.python_version }}
-          save-always: true
-          restore-keys: |
-            ccache-${{ runner.os }}
+          key: ${{ runner.os }}
+          verbose: '2'
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
         with:
           path: ${{ env.CONAN_HOME }}/p
           key: conan-${{ runner.os }}
-          save-always: true
+
+      - name: Setup environment variables
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            echo "PROJECT_ROOT=${{ github.workspace }}" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_ROOT=/project" >> "$GITHUB_ENV"
+          fi
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v2.22.0
         env:
           SKBUILD_LLVM_TARGETS_TO_BUILD: ${{ matrix.llvm_targets }}
           SKBUILD_LLVM_ENABLE_RUNTIMES: ${{ matrix.llvm_runtimes }}
           CIBW_BUILD: '${{ matrix.python_version }}-*'
+          CONAN_HOST_PROFILE: ${{ env.PROJECT_ROOT }}/.github/conan/${{ matrix.profile }}
 
       - name: Prepare the caches
         run: |
@@ -72,10 +82,6 @@ jobs:
           sudo chown -R ${USER} ${CCACHE_DIR}
           conan cache clean
         if: always()
-
-      - name: Output some ccache stats
-        run: ccache --show-stats
-        if: always() && runner.os == 'macOS'
 
       - uses: actions/upload-artifact@v4
         with:
