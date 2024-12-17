@@ -28,7 +28,7 @@ jobs:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
         os: [macos-14, ubuntu-22.04]
-        python_version: ["cp310", "cp311", "cp312"]
+        python_version: ["cp310", "cp311", "cp312", "cp313"]
         include:
           - os: macos-14
             profile: macos-armv8
@@ -51,14 +51,14 @@ jobs:
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}
+          key: ${{ matrix.profile }}-${{ matrix.python_version }}
           verbose: '2'
 
       - name: Setup Conan Cache
         uses: actions/cache@v4
         with:
           path: ${{ env.CONAN_HOME }}/p
-          key: conan-${{ runner.os }}
+          key: conan-${{ matrix.profile }}
 
       - name: Setup environment variables
         run: |
